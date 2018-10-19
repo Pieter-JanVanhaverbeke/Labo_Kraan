@@ -5,6 +5,8 @@ package be.kul.gantry.domain;
  */
 public class Item {
 
+    //TODO priority
+
     private final int id;
 
     public Item(int id) {

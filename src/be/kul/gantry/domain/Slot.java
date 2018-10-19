@@ -5,6 +5,9 @@ package be.kul.gantry.domain;
  */
 public class Slot {
 
+    //TODO Linker, rechter en parent node
+    //TODO Slots in boomstructuur
+
     private final int id;
     private final int centerX, centerY, xMin, xMax, yMin, yMax,z;
     private Item item;

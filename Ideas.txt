@@ -1,0 +1,27 @@
+    Boomstructuur van Slots.
+
+    Item priority systeem
+        - eerste afhalen, laagst priority number
+
+    plaats zoeken:
+        - eerst omliggende stapels bekijken
+        - niet stapelen op stack met lager priority number
+        - niet gevonden -> volgende schil volgens distance
+
+    distance functie: sqrt( (xSpeed * x)² + (ySpeed * y)² )
+
+    Intervallen zoeken
+
+    flow afhandelen: (Zolang er inputs en outputs zijn)
+    - is de huidig nodige Item beschikbaar voor output:
+        Y -> afhandelen -> restart;
+        N -> Item van input nemen -> plaats zoeken -> drop off -> restart;
+
+    flow zoeken
+    - Neighbourhood zoeken -> zoeken naar mogelijkheid
+        Y Afzetten -> stop;
+        N Volgend interval mogelijk
+           Y Volgend interval, oude neighbours skippen -> restart;
+           N Beste kandidaat -> stop;
+
+    output naar csv

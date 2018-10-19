@@ -20,6 +20,9 @@ import java.util.*;
  */
 public class Problem {
 
+    //TODO Lokaal zoeknen voor slot om Item te plaatsen.
+    //TODO Distance function gewogen met snelheid in x en y richting.
+
     private final int minX, maxX, minY, maxY;
     private final int maxLevels;
     private final List<Item> items;
