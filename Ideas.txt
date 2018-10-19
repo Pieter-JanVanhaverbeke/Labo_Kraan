@@ -1,4 +1,16 @@
-    Boomstructuur van Slots.
+    Yard
+        - Onderverdeeld in Rows.
+        - Array van Rows
+        - Row:
+            - Pyramide structuur
+            - Slot:
+                - leftParent & rightParent
+                - leftChild & rightChild
+        - zoeken
+            1. y coordinaat voor de juiste Row
+            2. x coord voor richting van zoeken
+            3. z coordinaat moet overeenkomen
+                -> indien z verkeerd: via leftChild verder zoeken
 
     Item priority systeem
         - eerste afhalen, laagst priority number

@@ -6,6 +6,7 @@ package be.kul.gantry.domain;
 public class Item {
 
     //TODO priority
+    //TODO Slot referentie
 
     private final int id;
 
