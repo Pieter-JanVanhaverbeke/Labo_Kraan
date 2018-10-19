@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="validator-v7">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/validator-v7.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
