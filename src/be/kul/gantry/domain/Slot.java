@@ -62,8 +62,9 @@ public class Slot {
         return item;
     }
 
-    public void setItem(Item item) {
-        this.item = item;
+    public void setItem(Item item) throws SlotAlreadyHasItemException{
+        if(this.item == null) this.item = item;
+        else throw new SlotAlreadyHasItemException(String.valueOf(item.getId()));
     }
 
     public SlotType getType() {
@@ -75,6 +76,16 @@ public class Slot {
     public boolean isOutputSlot() { return type == SlotType.OUTPUT; }
 
     public boolean isStorageSlot() { return type == SlotType.STORAGE; }
+
+    /**
+     * Remove item from slot and return it.
+     * @return item in this slot
+     */
+    public Item removeItem(){
+        Item returnItem = item;
+        item = null;
+        return returnItem;
+    }
 
     @Override
     public String toString() {

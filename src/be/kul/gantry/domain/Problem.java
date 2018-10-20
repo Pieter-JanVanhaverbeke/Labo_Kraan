@@ -238,6 +238,9 @@ public class Problem {
                 Item c = itemId == null ? null : itemList.get(itemId);
 
                 Slot s = new Slot(id,cx,cy,minX,maxX,minY,maxY,z,type,c);
+                // added -----
+                if(c!= null) c.setSlot(s);
+                // added -----
                 slotList.add(s);
             }
 

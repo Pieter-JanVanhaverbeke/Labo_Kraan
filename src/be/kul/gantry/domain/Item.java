@@ -8,9 +8,8 @@ public class Item {
     //TODO Slot referentie
 
     private final int id;
-
+    private Slot slot;
     private int priority;
-
 
     public Item(int id) {
         this.id = id;
@@ -27,5 +26,14 @@ public class Item {
 
     public void setPriority(int priority){
         this.priority = priority;
+    }
+
+    public Slot getSlot() {
+        return slot;
+    }
+
+    public void setSlot(Slot slot) throws SlotAlreadyHasItemException{
+        this.slot = slot;
+        slot.setItem(this);
     }
 }
