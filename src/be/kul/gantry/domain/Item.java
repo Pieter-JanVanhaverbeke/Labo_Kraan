@@ -5,16 +5,27 @@ package be.kul.gantry.domain;
  */
 public class Item {
 
-    //TODO priority
     //TODO Slot referentie
 
     private final int id;
 
+    private int priority;
+
+
     public Item(int id) {
         this.id = id;
+        priority = Integer.MAX_VALUE; //begint met laagste prioriteit, dus hoogste nummer
     }
 
     public int getId() {
         return id;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority){
+        this.priority = priority;
     }
 }
