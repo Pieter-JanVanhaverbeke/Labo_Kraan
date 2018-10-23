@@ -239,7 +239,11 @@ public class Problem {
 
                 Slot s = new Slot(id,cx,cy,minX,maxX,minY,maxY,z,type,c);
                 // added -----
-                if(c!= null) c.setSlot(s);
+                if(c!= null) try {
+                    c.setSlot(s);
+                } catch (SlotAlreadyHasItemException e) {
+                    e.printStackTrace();
+                }
                 // added -----
                 slotList.add(s);
             }
@@ -282,7 +286,10 @@ public class Problem {
                 int sid = ((Long) outputJob.get("toId")).intValue();
 
                 Job job = new Job(jid++,itemList.get(iid),null, slotList.get(sid));
+
                 outputJobList.add(job);
+                //adding priority to item
+                itemList.get(iid).setPriority(outputJobList.size());
             }
 
 
