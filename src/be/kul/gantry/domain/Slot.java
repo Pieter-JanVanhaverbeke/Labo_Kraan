@@ -1,12 +1,19 @@
 package be.kul.gantry.domain;
 
+import java.util.List;
+
 /**
  * Created by Wim on 27/04/2015.
  */
-public class Slot {
+public class Slot implements Comparable<Slot>{
 
     //TODO Linker, rechter en parent node
     //TODO Slots in boomstructuur
+
+    private Slot leftParent;
+    private Slot rightParent;
+    private Slot leftChild;
+    private Slot rightChild;
 
     private final int id;
     private final int centerX, centerY, xMin, xMax, yMin, yMax,z;
@@ -87,9 +94,57 @@ public class Slot {
         return returnItem;
     }
 
+    public Slot getLeftParent() {
+        return leftParent;
+    }
+
+    public void setLeftParent(Slot leftParent) {
+        this.leftParent = leftParent;
+    }
+
+    public Slot getRightParent() {
+        return rightParent;
+    }
+
+    public void setRightParent(Slot rightParent) {
+        this.rightParent = rightParent;
+    }
+
+    public Slot getLeftChild() {
+        return leftChild;
+    }
+
+    public void setLeftChild(Slot leftChild) {
+        this.leftChild = leftChild;
+    }
+
+    public Slot getRightChild() {
+        return rightChild;
+    }
+
+    public void setRightChild(Slot rightChild) {
+        this.rightChild = rightChild;
+    }
+
+    public void setParents(List<Slot> parents){
+        this.rightParent = parents.get(0);
+        parents.get(0).setLeftChild(this);
+        if(parents.size() > 1){
+            this.leftParent = parents.get(1);
+            parents.get(1).setRightChild(this);
+        }
+    }
+
     @Override
     public String toString() {
         return String.format("Slot %d (%d,%d,%d)",id,centerX,centerY,z);
+    }
+
+    @Override
+    public int compareTo(Slot o) {
+        if(this.centerY != o.centerY) return o.centerY - this.centerY;
+        if(this.z != o.z) return o.z - this.z;
+        else return o.centerX - this.centerX;
     }
 
     public static enum SlotType {

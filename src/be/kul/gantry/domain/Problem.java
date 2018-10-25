@@ -2,6 +2,7 @@ package be.kul.gantry.domain;
 
 
 
+import be.kul.gantry.domain.Pyramid.Row;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.json.simple.JSONArray;
@@ -34,7 +35,9 @@ public class Problem {
     private final int safetyDistance;
     private final int pickupPlaceDuration;
 
-    public Problem(int minX, int maxX, int minY, int maxY, int maxLevels,
+    private HashMap<Integer, Row> rows;
+
+    public Problem(int minX, int maxX, int minY, int maxY, int storageMinX, int storageMaxX, int maxLevels,
                    List<Item> items, List<Gantry> gantries, List<Slot> slots,
                    List<Job> inputJobSequence, List<Job> outputJobSequence, int gantrySafetyDist, int pickupPlaceDuration) {
         this.minX = minX;
@@ -49,6 +52,29 @@ public class Problem {
         this.outputJobSequence = new ArrayList<>(outputJobSequence);
         this.safetyDistance = gantrySafetyDist;
         this.pickupPlaceDuration = pickupPlaceDuration;
+
+        this.rows = new HashMap<>();
+        LinkedList<Slot> sortedSlots, temp = new LinkedList<>(slots);
+        while(temp.size() > 2){
+            sortedSlots = new LinkedList<>();
+            int y = temp.getFirst().getCenterY();
+            for(Slot slot: temp){
+                if(slot.getCenterY() == y && slot.getType() != Slot.SlotType.INPUT && slot.getType() != Slot.SlotType.OUTPUT) sortedSlots.add(slot);
+            }
+            temp.removeAll(sortedSlots);
+            this.rows.put(y, new Row(sortedSlots, maxLevels, storageMinX, storageMaxX));
+        }
+        for(Slot slot: slots){
+            if(slot.getCenterY() == 5){
+                System.out.println("slot: " + slot.getId());
+                System.out.println("item: " + (slot.getItem() == null ? "N/A" : slot.getItem().getId()));
+                System.out.println("leftParent: " + (slot.getLeftParent() == null ? "none" : slot.getLeftParent().getId()));
+                System.out.println("rightParent: " + (slot.getRightParent() == null ? "none" : slot.getRightParent().getId()));
+                System.out.println("leftChild: " + (slot.getLeftChild() == null ? "none" : slot.getLeftChild().getId()));
+                System.out.println("rightChild: " + (slot.getRightChild() == null ? "none" : slot.getRightChild().getId()));
+                System.out.println("========================================================");
+            }
+        }
     }
 
     public int getMinX() {
@@ -213,6 +239,7 @@ public class Problem {
 
 
             int overallMinX = Integer.MAX_VALUE, overallMaxX = Integer.MIN_VALUE;
+            int storageMinX = Integer.MAX_VALUE, storageMaxX = Integer.MIN_VALUE;
             int overallMinY = Integer.MAX_VALUE, overallMaxY = Integer.MIN_VALUE;
 
             JSONArray slots = (JSONArray) root.get("slots");
@@ -239,10 +266,16 @@ public class Problem {
 
                 Slot s = new Slot(id,cx,cy,minX,maxX,minY,maxY,z,type,c);
                 // added -----
+                if(s.getType() == Slot.SlotType.STORAGE){
+                    storageMaxX = Math.max(storageMaxX, maxX);
+                    storageMinX = Math.min(storageMinX, minX);
+                }
+
                 if(c!= null) try {
                     c.setSlot(s);
                 } catch (SlotAlreadyHasItemException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
+                    //ignore bij opstellen.
                 }
                 // added -----
                 slotList.add(s);
@@ -298,6 +331,8 @@ public class Problem {
                     overallMaxX,
                     overallMinY,
                     overallMaxY,
+                    storageMinX,
+                    storageMaxX,
                     maxLevels,
                     itemList,
                     gantryList,
