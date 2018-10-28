@@ -10,6 +10,10 @@ public class Gantry {
     private final int startX,startY;
     private final double xSpeed,ySpeed;
 
+    private int currentX,currentY;
+    private double currentTime;
+    private Item item;
+
     public Gantry(int id,
                   int xMin, int xMax,
                   int startX, int startY,
@@ -19,8 +23,12 @@ public class Gantry {
         this.xMax = xMax;
         this.startX = startX;
         this.startY = startY;
+        this.currentX = startX;
+        this.currentY = startY;
         this.xSpeed = xSpeed;
         this.ySpeed = ySpeed;
+
+        this.currentTime = 0;
     }
 
     public int getId() {
@@ -68,5 +76,27 @@ public class Gantry {
 
     public boolean canReachSlot(Slot s) {
         return xMin <= s.getCenterX() && s.getCenterX() <= xMax;
+    }
+
+    public void move(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException{
+        System.out.println(String.format("%d;%.2f;%d;%d;null", id, currentTime, currentX, currentY));
+        updateTime(fromSlot);
+        System.out.println(String.format("%d;%.2f;%d;%d;null", id, currentTime, currentX, currentY));
+        currentTime++;
+        System.out.println(String.format("%d;%.2f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+        updateTime(toSlot);
+        item.setSlot(toSlot);
+        System.out.println(String.format("%d;%.2f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+        currentTime++;
+    }
+
+    public void updateTime(Slot slot){
+        currentTime = Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
+        currentX = slot.getCenterX();
+        currentY = slot.getCenterY();
+    }
+
+    public void move(int x, int y){
+
     }
 }

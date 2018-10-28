@@ -40,7 +40,7 @@ public class Job {
 
     @Override
     public String toString() {
-        return String.format("J%d move %d from %s to %s",id,item.getId(),pickup.slot,place.slot);
+        return String.format("%d move %d from %s to %s",id,item.getId(),pickup.slot,place.slot);
     }
 
     public class Task {

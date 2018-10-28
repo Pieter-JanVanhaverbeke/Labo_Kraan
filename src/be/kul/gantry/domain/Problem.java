@@ -16,6 +16,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
+import static be.kul.gantry.domain.Slot.SlotType.STORAGE;
+
 /**
  * Created by Wim on 27/04/2015.
  */
@@ -36,6 +38,7 @@ public class Problem {
     private final int pickupPlaceDuration;
 
     private HashMap<Integer, Row> rows;
+    private EmptySlotComparator comparator;
 
     public Problem(int minX, int maxX, int minY, int maxY, int storageMinX, int storageMaxX, int maxLevels,
                    List<Item> items, List<Gantry> gantries, List<Slot> slots,
@@ -64,17 +67,7 @@ public class Problem {
             temp.removeAll(sortedSlots);
             this.rows.put(y, new Row(sortedSlots, maxLevels, storageMinX, storageMaxX));
         }
-        for(Slot slot: slots){
-            if(slot.getCenterY() == 5){
-                System.out.println("slot: " + slot.getId());
-                System.out.println("item: " + (slot.getItem() == null ? "N/A" : slot.getItem().getId()));
-                System.out.println("leftParent: " + (slot.getLeftParent() == null ? "none" : slot.getLeftParent().getId()));
-                System.out.println("rightParent: " + (slot.getRightParent() == null ? "none" : slot.getRightParent().getId()));
-                System.out.println("leftChild: " + (slot.getLeftChild() == null ? "none" : slot.getLeftChild().getId()));
-                System.out.println("rightChild: " + (slot.getRightChild() == null ? "none" : slot.getRightChild().getId()));
-                System.out.println("========================================================");
-            }
-        }
+        comparator = new EmptySlotComparator();
     }
 
     public int getMinX() {
@@ -266,7 +259,7 @@ public class Problem {
 
                 Slot s = new Slot(id,cx,cy,minX,maxX,minY,maxY,z,type,c);
                 // added -----
-                if(s.getType() == Slot.SlotType.STORAGE){
+                if(s.getType() == STORAGE){
                     storageMaxX = Math.max(storageMaxX, maxX);
                     storageMinX = Math.min(storageMinX, minX);
                 }
@@ -346,6 +339,50 @@ public class Problem {
 
     }
 
+    public void solve(){
 
+        Slot fromSlot, toSlot;
+        Job job;
+        while (!this.inputJobSequence.isEmpty() || !this.outputJobSequence.isEmpty()){
 
+            if(!this.outputJobSequence.isEmpty() &&
+                    (fromSlot = items.get(outputJobSequence.get(0).getItem().getId()).getSlot()) != null) {
+                System.out.println(fromSlot);
+            }
+            else if(!this.inputJobSequence.isEmpty()) {
+                job = inputJobSequence.remove(0);
+                fromSlot = job.getPickup().getSlot();
+                try {
+                    toSlot = findEmpty(fromSlot.getCenterX(), fromSlot.getCenterY());
+                    try {
+                        gantries.get(0).move(job.getItem(), fromSlot, toSlot);
+                    } catch (SlotAlreadyHasItemException e){
+                        e.printStackTrace();
+                        return;
+                    }
+                } catch (NoSlotAvailableException e){
+                    e.printStackTrace();
+                }
+            }
+
+        }
+    }
+
+    public void move(Slot fromSlot, Slot toSlot){
+        System.out.println(String.format("%s"));
+    }
+
+    public Slot findEmpty(int centerX, int centerY) throws NoSlotAvailableException{
+
+        comparator.setCenterX(centerX);
+        comparator.setCenterY(centerY);
+        slots.sort(comparator);
+
+        for (Slot slot: slots) {
+            if(slot.getItem() == null && slot.willNotCollapse() && slot.getType() == STORAGE){
+                return slot;
+            }
+        }
+        throw new NoSlotAvailableException();
+    }
 }

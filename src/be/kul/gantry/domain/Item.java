@@ -33,7 +33,13 @@ public class Item {
     }
 
     public void setSlot(Slot slot) throws SlotAlreadyHasItemException{
+        if(this.slot != null) this.slot.setItem(null);
         this.slot = slot;
         slot.setItem(this);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("item: %d, priority: %d", id, priority);
     }
 }

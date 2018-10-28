@@ -137,7 +137,7 @@ public class Slot implements Comparable<Slot>{
 
     @Override
     public String toString() {
-        return String.format("Slot %d (%d,%d,%d)",id,centerX,centerY,z);
+        return String.format("Slot %d (%d,%d,%d)\n%s",id,centerX,centerY,z, item);
     }
 
     @Override
@@ -145,6 +145,13 @@ public class Slot implements Comparable<Slot>{
         if(this.centerY != o.centerY) return o.centerY - this.centerY;
         if(this.z != o.z) return o.z - this.z;
         else return o.centerX - this.centerX;
+    }
+
+    public boolean willNotCollapse(){
+        return (leftChild == null && rightChild == null) || (
+                (leftChild != null && leftChild.willNotCollapse() && leftChild.getItem() != null) &&
+                ((rightChild != null && rightChild.willNotCollapse() && rightChild.getItem() != null) || rightChild == null)
+        );
     }
 
     public static enum SlotType {

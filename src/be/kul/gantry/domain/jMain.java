@@ -10,7 +10,8 @@ public class jMain {
 
     public static void main(String[] args){
         try {
-            Problem.fromJson(new File("1_10_100_4_FALSE_65_50_50.json"));
+            Problem problem = Problem.fromJson(new File("1_10_100_4_FALSE_65_50_50.json"));
+            problem.solve();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ParseException e) {
