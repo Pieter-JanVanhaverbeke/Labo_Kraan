@@ -1,5 +1,6 @@
 package be.kul.gantry.domain;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -70,7 +71,7 @@ public class Slot implements Comparable<Slot>{
     }
 
     public void setItem(Item item) throws SlotAlreadyHasItemException{
-        if(this.item == null) this.item = item;
+        if(this.item == null || item == null) this.item = item;
         else throw new SlotAlreadyHasItemException(String.valueOf(item.getId()));
     }
 
@@ -152,6 +153,31 @@ public class Slot implements Comparable<Slot>{
                 (leftChild != null && leftChild.willNotCollapse() && leftChild.getItem() != null) &&
                 ((rightChild != null && rightChild.willNotCollapse() && rightChild.getItem() != null) || rightChild == null)
         );
+    }
+
+    public boolean isBuried(){
+        return ((this.leftParent != null && this.leftParent.getItem() != null) || (this.rightParent != null && this.rightParent.getItem() != null));
+    }
+
+    public int getPriority(){
+        int priority = Integer.MAX_VALUE;
+        if(this.leftChild != null) priority = Math.min(priority, leftChild.getPriority());
+        if(this.rightChild != null) priority = Math.min(priority, rightChild.getPriority());
+        if(this.item != null) priority = Math.min(priority, this.item.getPriority());
+        return priority;
+    }
+
+    public List<Slot> getAbove(){
+        List<Slot> above = new LinkedList<>();
+        if(this.leftParent != null && this.leftParent.getItem() != null){
+            above.add(this.leftParent);
+            above.addAll(this.leftParent.getAbove());
+        }
+        if(this.rightParent != null && this.rightParent.getItem() != null){
+            above.add(this.rightParent);
+            above.addAll(this.rightParent.getAbove());
+        }
+        return above;
     }
 
     public static enum SlotType {

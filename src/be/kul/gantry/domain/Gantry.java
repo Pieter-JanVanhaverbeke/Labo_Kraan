@@ -9,6 +9,7 @@ public class Gantry {
     private final int xMin,xMax;
     private final int startX,startY;
     private final double xSpeed,ySpeed;
+    private final int pickupPlaceDuration;
 
     private int currentX,currentY;
     private double currentTime;
@@ -17,7 +18,8 @@ public class Gantry {
     public Gantry(int id,
                   int xMin, int xMax,
                   int startX, int startY,
-                  double xSpeed, double ySpeed) {
+                  double xSpeed, double ySpeed,
+                  int pickupPlaceDuration) {
         this.id = id;
         this.xMin = xMin;
         this.xMax = xMax;
@@ -27,6 +29,7 @@ public class Gantry {
         this.currentY = startY;
         this.xSpeed = xSpeed;
         this.ySpeed = ySpeed;
+        this.pickupPlaceDuration = pickupPlaceDuration;
 
         this.currentTime = 0;
     }
@@ -78,25 +81,23 @@ public class Gantry {
         return xMin <= s.getCenterX() && s.getCenterX() <= xMax;
     }
 
-    public void move(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException{
-        System.out.println(String.format("%d;%.2f;%d;%d;null", id, currentTime, currentX, currentY));
+    public void move(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException, SlotUnreachableException{
+        if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
+        if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
+        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
         updateTime(fromSlot);
-        System.out.println(String.format("%d;%.2f;%d;%d;null", id, currentTime, currentX, currentY));
-        currentTime++;
-        System.out.println(String.format("%d;%.2f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+        currentTime+=pickupPlaceDuration;
+        System.out.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
         updateTime(toSlot);
         item.setSlot(toSlot);
-        System.out.println(String.format("%d;%.2f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
-        currentTime++;
+        System.out.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+        currentTime+=pickupPlaceDuration;
     }
 
     public void updateTime(Slot slot){
-        currentTime = Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
+        currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
         currentX = slot.getCenterX();
         currentY = slot.getCenterY();
-    }
-
-    public void move(int x, int y){
-
     }
 }
