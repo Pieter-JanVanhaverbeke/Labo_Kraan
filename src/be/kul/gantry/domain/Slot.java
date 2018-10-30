@@ -11,7 +11,7 @@ public class Slot implements Comparable<Slot>{
     //TODO Linker, rechter en parent node
     //TODO Slots in boomstructuur
 
-    private Slot leftParent;
+    private Slot leftParent;                    //ieder slot heeft 2 kinderen en 2 parrents, bovenste slots hebben geen parrents
     private Slot rightParent;
     private Slot leftChild;
     private Slot rightChild;
@@ -142,20 +142,20 @@ public class Slot implements Comparable<Slot>{
     }
 
     @Override
-    public int compareTo(Slot o) {
-        if(this.centerY != o.centerY) return o.centerY - this.centerY;
+    public int compareTo(Slot o) {                                                      //eerst y richting kijken voor rij
+        if(this.centerY != o.centerY) return o.centerY - this.centerY;                  //, dan z (hoogte) richting, dan x
         if(this.z != o.z) return o.z - this.z;
         else return o.centerX - this.centerX;
     }
 
-    public boolean willNotCollapse(){
+    public boolean willNotCollapse(){                               //kijken of item in slot niet vliegt
         return (leftChild == null && rightChild == null) || (
                 (leftChild != null && leftChild.willNotCollapse() && leftChild.getItem() != null) &&
                 ((rightChild != null && rightChild.willNotCollapse() && rightChild.getItem() != null) || rightChild == null)
         );
     }
 
-    public boolean isBuried(){
+    public boolean isBuried(){          //kijken of boven slot nog een item bevindt.
         return ((this.leftParent != null && this.leftParent.getItem() != null) || (this.rightParent != null && this.rightParent.getItem() != null));
     }
 
@@ -167,7 +167,7 @@ public class Slot implements Comparable<Slot>{
         return priority;
     }
 
-    public List<Slot> getAbove(){
+    public List<Slot> getAbove(){       //geeft een lijst terug met de slots boven huidige slot.
         List<Slot> above = new LinkedList<>();
         if(this.leftParent != null && this.leftParent.getItem() != null){
             above.add(this.leftParent);

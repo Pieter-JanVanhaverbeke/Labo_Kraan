@@ -13,7 +13,6 @@ public class Gantry {
 
     private int currentX,currentY;
     private double currentTime;
-    private Item item;
 
     public Gantry(int id,
                   int xMin, int xMax,
@@ -62,11 +61,11 @@ public class Gantry {
         return ySpeed;
     }
 
-    public boolean overlapsGantryArea(Gantry g) {
+    public boolean overlapsGantryArea(Gantry g) {   //kijkt of overlap is tussen kranen
         return g.xMin < xMax && xMin < g.xMax;
     }
 
-    public int[] getOverlapArea(Gantry g) {
+    public int[] getOverlapArea(Gantry g) {         //geeft de min en max in x richting terug van de kraan
 
         int maxmin = Math.max(xMin, g.xMin);
         int minmax = Math.min(xMax, g.xMax);
@@ -77,7 +76,7 @@ public class Gantry {
             return new int[]{maxmin, minmax};
     }
 
-    public boolean canReachSlot(Slot s) {
+    public boolean canReachSlot(Slot s) {//methode dat kijkt of kraan slot kan bereiken
         return xMin <= s.getCenterX() && s.getCenterX() <= xMax;
     }
 
@@ -95,7 +94,7 @@ public class Gantry {
         currentTime+=pickupPlaceDuration;
     }
 
-    public void updateTime(Slot slot){
+    public void updateTime(Slot slot){              //tijd aanpassen voor een beweging naar een slot
         currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
         currentX = slot.getCenterX();
         currentY = slot.getCenterY();
