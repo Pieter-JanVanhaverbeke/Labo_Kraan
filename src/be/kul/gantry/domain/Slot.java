@@ -142,24 +142,28 @@ public class Slot implements Comparable<Slot>{
     }
 
     @Override
-    public int compareTo(Slot o) {                                                      //eerst y richting kijken voor rij
-        if(this.centerY != o.centerY) return o.centerY - this.centerY;                  //, dan z (hoogte) richting, dan x
+    public int compareTo(Slot o) {
+        // sort y value first, followed by z value (height) and finally x value
+        if(this.centerY != o.centerY) return o.centerY - this.centerY;
         if(this.z != o.z) return o.z - this.z;
         else return o.centerX - this.centerX;
     }
 
-    public boolean willNotCollapse(){                               //kijken of item in slot niet vliegt
+    public boolean willNotCollapse(){
+        // check if item in slot will not fall down, all slots below need to contain items
         return (leftChild == null && rightChild == null) || (
                 (leftChild != null && leftChild.willNotCollapse() && leftChild.getItem() != null) &&
                 ((rightChild != null && rightChild.willNotCollapse() && rightChild.getItem() != null) || rightChild == null)
         );
     }
 
-    public boolean isBuried(){          //kijken of boven slot nog een item bevindt.
+    public boolean isBuried(){
+        // check if the slots above contain items
         return ((this.leftParent != null && this.leftParent.getItem() != null) || (this.rightParent != null && this.rightParent.getItem() != null));
     }
 
     public int getPriority(){
+        // the priority is the lowest value for priority of all slots below
         int priority = Integer.MAX_VALUE;
         if(this.leftChild != null) priority = Math.min(priority, leftChild.getPriority());
         if(this.rightChild != null) priority = Math.min(priority, rightChild.getPriority());
@@ -167,7 +171,8 @@ public class Slot implements Comparable<Slot>{
         return priority;
     }
 
-    public List<Slot> getAbove(){       //geeft een lijst terug met de slots boven huidige slot.
+    public List<Slot> getAbove(){
+        //returns list of slots above the current slot
         List<Slot> above = new LinkedList<>();
         if(this.leftParent != null && this.leftParent.getItem() != null){
             above.add(this.leftParent);

@@ -20,8 +20,8 @@ public class SlotMap extends ArrayList<HashMap<Integer, Slot>>{
         for(int i = 0; i < maxHeight; i++) this.add(i, new HashMap<>());
     }
 
-    public List<Slot> getSlotsAt(int x, int z){             //geeft slot van deze rij terug op x,z coordinaat
-
+    public List<Slot> getSlotsAt(int x, int z){
+        // return slot at a certain x and z coordinate, or 2 if slots are stacked in a pyramid form
         List<Slot> solution = new LinkedList<>();
         int leftX = x, rightX = x;
         while((leftX >= minSlot || rightX <= maxSlot) && solution.isEmpty()){
@@ -30,18 +30,18 @@ public class SlotMap extends ArrayList<HashMap<Integer, Slot>>{
             leftX--;
             rightX++;
         }
-        if(solution.isEmpty()){
-        }
         return solution;
     }
 
     public void add(Slot slot){
+        // add slot to map and set parents of slot
         List<Slot> parents = this.getSlotsAt(slot.getCenterX(), slot.getZ() + 1);
         slot.setParents(parents);
         this.get(slot.getZ()).put(slot.getCenterX(), slot);
     }
 
     public void addTopSlot(int x, int z, Slot slot){
+        // top slot don't need parents to be set
         this.get(z).put(x, slot);
-    }       //slot toevoegen bovenaan
+    }
 }

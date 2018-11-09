@@ -30,7 +30,8 @@ public class Item {
         return slot;
     }
 
-    public void setSlot(Slot slot) throws SlotAlreadyHasItemException{      //item bij slot plaatsen
+    public void setSlot(Slot slot) throws SlotAlreadyHasItemException{
+        // bidirectionally link item and slot in case slot is not output slot
         if (this.slot != null) this.slot.setItem(null);
         this.slot = slot;
         if (slot.getType() != Slot.SlotType.OUTPUT) slot.setItem(this);

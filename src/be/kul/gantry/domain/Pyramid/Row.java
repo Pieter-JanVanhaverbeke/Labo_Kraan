@@ -10,7 +10,8 @@ public class Row {
     private SlotMap top;
     private int maxHeight;
 
-    public Row(List<Slot> slots, int maxHeight, int minX, int maxX) {       //slotrij aanmaken via gelinkte lijst van slots.
+    public Row(List<Slot> slots, int maxHeight, int minX, int maxX) {
+        // make tow from list of Slots
         this.top = new SlotMap(minX, maxX, maxHeight);
         this.maxHeight = maxHeight;
 

@@ -1,5 +1,7 @@
 package be.kul.gantry.domain;
 
+import java.io.PrintWriter;
+
 /**
  * Created by Wim on 27/04/2015.
  */
@@ -13,6 +15,8 @@ public class Gantry {
 
     private int currentX,currentY;
     private double currentTime;
+
+    private PrintWriter outputWriter;
 
     public Gantry(int id,
                   int xMin, int xMax,
@@ -61,6 +65,10 @@ public class Gantry {
         return ySpeed;
     }
 
+    public void setOutputWriter(PrintWriter outputWriter) {
+        this.outputWriter = outputWriter;
+    }
+
     public boolean overlapsGantryArea(Gantry g) {   //kijkt of overlap is tussen kranen
         return g.xMin < xMax && xMin < g.xMax;
     }
@@ -81,24 +89,30 @@ public class Gantry {
     }
 
     public void move(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException, SlotUnreachableException{
+        // check if gantry can reach slots, debug only for one gantry
         if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
         if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
+
+        // move to required slot and pick up item
         updateTime(fromSlot);
-        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
         currentTime+=pickupPlaceDuration;
-        System.out.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+
+        // move to next slot and drop off item
         updateTime(toSlot);
+        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
         item.setSlot(toSlot);
-        System.out.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
         currentTime+=pickupPlaceDuration;
-        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
     }
 
     public void printStart(){
-        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
     }
 
-    public void updateTime(Slot slot){              //tijd aanpassen voor een beweging naar een slot
+    public void updateTime(Slot slot){
+        // update time after moving
         currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
         currentX = slot.getCenterX();
         currentY = slot.getCenterY();
