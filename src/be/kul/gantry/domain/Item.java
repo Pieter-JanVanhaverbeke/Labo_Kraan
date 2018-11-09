@@ -5,8 +5,6 @@ package be.kul.gantry.domain;
  */
 public class Item {
 
-    //TODO Slot referentie
-
     private final int id;
     private Slot slot;
     private int priority;
@@ -32,7 +30,7 @@ public class Item {
         return slot;
     }
 
-    public void setSlot(Slot slot) throws SlotAlreadyHasItemException{
+    public void setSlot(Slot slot) throws SlotAlreadyHasItemException{      //item bij slot plaatsen
         if (this.slot != null) this.slot.setItem(null);
         this.slot = slot;
         if (slot.getType() != Slot.SlotType.OUTPUT) slot.setItem(this);

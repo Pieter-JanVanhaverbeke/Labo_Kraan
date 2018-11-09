@@ -20,7 +20,7 @@ public class SlotMap extends ArrayList<HashMap<Integer, Slot>>{
         for(int i = 0; i < maxHeight; i++) this.add(i, new HashMap<>());
     }
 
-    public List<Slot> getSlotsAt(int x, int z){
+    public List<Slot> getSlotsAt(int x, int z){             //geeft slot van deze rij terug op x,z coordinaat
 
         List<Slot> solution = new LinkedList<>();
         int leftX = x, rightX = x;
@@ -43,5 +43,5 @@ public class SlotMap extends ArrayList<HashMap<Integer, Slot>>{
 
     public void addTopSlot(int x, int z, Slot slot){
         this.get(z).put(x, slot);
-    }
+    }       //slot toevoegen bovenaan
 }
