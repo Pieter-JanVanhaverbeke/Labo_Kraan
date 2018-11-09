@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static be.kul.gantry.domain.Slot.SlotType.INPUT;
+import static be.kul.gantry.domain.Slot.SlotType.OUTPUT;
 import static be.kul.gantry.domain.Slot.SlotType.STORAGE;
 
 /**
@@ -344,15 +345,17 @@ public class Problem {
 
         Slot fromSlot, toSlot;
         Job job;
+        for(Gantry gantry: gantries) gantry.printStart();
         while (!this.inputJobSequence.isEmpty() || !this.outputJobSequence.isEmpty()){
 
             if(!this.outputJobSequence.isEmpty() &&
                     (fromSlot = items.get(outputJobSequence.get(0).getItem().getId()).getSlot()) != null) {
-                job = outputJobSequence.remove(0);
+                job = outputJobSequence.get(0);
                 toSlot = job.getPlace().getSlot();
                 try {
                     if(fromSlot.isBuried()) unBury(fromSlot);
                     gantries.get(0).move(job.getItem(), fromSlot, toSlot);
+                    outputJobSequence.remove(0);
                 } catch (SlotAlreadyHasItemException e) {
                     e.printStackTrace();
                 } catch (SlotUnreachableException e) {
@@ -360,12 +363,14 @@ public class Problem {
                 }
             }
             else if(!this.inputJobSequence.isEmpty()) {
-                job = inputJobSequence.remove(0);
+                job = inputJobSequence.get(0);
                 fromSlot = job.getPickup().getSlot();
                 try {
                     toSlot = findEmpty(fromSlot.getCenterX(), fromSlot.getCenterY(), job.getItem());
                     try {
                         gantries.get(0).move(job.getItem(), fromSlot, toSlot);
+                        inputJobSequence.remove(0);
+                        if(toSlot.getType() == OUTPUT) outputJobSequence.remove(0);
                     } catch (SlotAlreadyHasItemException e){
                         e.printStackTrace();
                         return;
@@ -376,8 +381,8 @@ public class Problem {
                     e.printStackTrace();
                 }
             }
-
         }
+        if(outputJobSequence.isEmpty() && inputJobSequence.isEmpty()) System.out.println("done");
     }
 
     public void unBury(Slot slot) throws SlotUnreachableException{
@@ -386,12 +391,14 @@ public class Problem {
         Slot empty;
         for(Slot slotToMove: toMove){
             try {
-                empty = findEmpty(slotToMove.getCenterX(), slotToMove.getCenterY(), slotToMove.getItem());
-                gantries.get(0).move(
-                        slotToMove.getItem(),
-                        slotToMove,
-                        empty
-                );
+                if(slotToMove.getItem() != null) {
+                    empty = findEmpty(slotToMove.getCenterX(), slotToMove.getCenterY(), slotToMove.getItem());
+                    gantries.get(0).move(
+                            slotToMove.getItem(),
+                            slotToMove,
+                            empty
+                    );
+                }
             } catch (SlotAlreadyHasItemException e) {
                 e.printStackTrace();
             } catch (NoSlotAvailableException e) {
@@ -403,7 +410,7 @@ public class Problem {
     public Slot findEmpty(int centerX, int centerY, Item toPlace) throws NoSlotAvailableException{
 
         if(!outputJobSequence.isEmpty() && outputJobSequence.get(0).getItem() == toPlace){
-            return outputJobSequence.remove(0).getPlace().getSlot();
+            return outputJobSequence.get(0).getPlace().getSlot();
         }
 
         comparator.setCenterX(centerX);
@@ -412,6 +419,9 @@ public class Problem {
         Slot best = null;
 
         for (Slot slot: slots) {
+            if(toPlace == null){
+                System.out.println("problem");
+            }
             if(slot.getItem() == null && slot.willNotCollapse() && slot.getType() == STORAGE &&
                     (toPlace.getSlot() == null ||
                             (slot.getCenterX() != toPlace.getSlot().getCenterX() && slot.getCenterY() != toPlace.getSlot().getCenterY()))){

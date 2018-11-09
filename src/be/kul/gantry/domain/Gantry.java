@@ -83,7 +83,6 @@ public class Gantry {
     public void move(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException, SlotUnreachableException{
         if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
         if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
-        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
         updateTime(fromSlot);
         System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
         currentTime+=pickupPlaceDuration;
@@ -92,6 +91,11 @@ public class Gantry {
         item.setSlot(toSlot);
         System.out.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
         currentTime+=pickupPlaceDuration;
+        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+    }
+
+    public void printStart(){
+        System.out.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
     }
 
     public void updateTime(Slot slot){              //tijd aanpassen voor een beweging naar een slot
