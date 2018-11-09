@@ -9,11 +9,10 @@ public class EmptySlotComparator implements Comparator<Slot>{
 
     @Override
     public int compare(Slot slot1, Slot slot2) {
-
-        return
-                ((centerX - slot2.getCenterX()) + (centerY - slot2.getCenterY())) -
-                ((centerX - slot1.getCenterX()) + (centerY - slot1.getCenterY()));
-
+        return (int) (
+                (Math.pow((centerX - slot2.getCenterX()), 2) + Math.pow((centerY - slot2.getCenterY()), 2)) -
+                        (Math.pow((centerX - slot1.getCenterX()), 2) + Math.pow((centerY - slot1.getCenterY()), 2))
+        );
     }
 
     public void setCenterX(int centerX) {
