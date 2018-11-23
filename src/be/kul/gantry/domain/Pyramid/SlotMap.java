@@ -44,4 +44,20 @@ public class SlotMap extends ArrayList<HashMap<Integer, Slot>>{
         // top slot don't need parents to be set
         this.get(z).put(x, slot);
     }
+
+    public int getMinSlot() {
+        return minSlot;
+    }
+
+    public void setMinSlot(int minSlot) {
+        this.minSlot = minSlot;
+    }
+
+    public int getMaxSlot() {
+        return maxSlot;
+    }
+
+    public void setMaxSlot(int maxSlot) {
+        this.maxSlot = maxSlot;
+    }
 }

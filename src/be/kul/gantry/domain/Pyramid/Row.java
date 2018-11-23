@@ -26,4 +26,37 @@ public class Row {
             }
         }
     }
+
+    public List<Slot> getLeftMostSlots(){
+        List<Slot> leftmost;
+
+        leftmost = top.getSlotsAt(0, 0);
+        leftmost.addAll(leftmost.get(0).getAbove());
+
+        return leftmost;
+    }
+
+    public List<Slot> getRightMostSlot(){
+
+        List<Slot> rightMost;
+
+        rightMost = top.getSlotsAt(top.getMinSlot(), 0);
+        rightMost.addAll(rightMost.get(0).getAbove());
+
+        return rightMost;
+    }
+
+    private List<Slot> getAllAbove(List<Slot> slotList) {
+
+        List<Slot> nextUp;
+        if(!slotList.isEmpty()){
+            int centerX = slotList.get(0).getCenterX();
+            for(int height = 1; height < maxHeight; height++) {
+                nextUp = top.getSlotsAt(centerX, height);
+                if(slotList.size() == 1) slotList.addAll(nextUp);
+            }
+        }
+        return slotList;
+    }
+
 }

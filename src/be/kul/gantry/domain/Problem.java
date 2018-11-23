@@ -9,10 +9,12 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.omg.SendingContext.RunTime;
 
 import java.io.*;
 import java.util.*;
 
+import static be.kul.gantry.domain.Slot.SlotType.INPUT;
 import static be.kul.gantry.domain.Slot.SlotType.OUTPUT;
 import static be.kul.gantry.domain.Slot.SlotType.STORAGE;
 
@@ -35,6 +37,8 @@ public class Problem {
     private final int pickupPlaceDuration;
 
     private HashMap<Integer, Row> rows;
+    private Slot inputSlot;
+    private Slot outputSlot;
     private EmptySlotComparator comparator;
 
     public Problem(int minX, int maxX, int minY, int maxY, int storageMinX, int storageMaxX, int maxLevels,
@@ -59,6 +63,8 @@ public class Problem {
             sortedSlots = new LinkedList<>();
             int y = temp.getFirst().getCenterY();
             for(Slot slot: temp){
+                if(slot.getType() == INPUT) this.inputSlot = slot;
+                if(slot.getType() == OUTPUT) this.outputSlot = slot;
                 if(slot.getCenterY() == y && slot.getType() != Slot.SlotType.INPUT && slot.getType() != Slot.SlotType.OUTPUT) sortedSlots.add(slot);
             }
             temp.removeAll(sortedSlots);
@@ -343,55 +349,146 @@ public class Problem {
 
     public void solve(){
 
-        Slot fromSlot, toSlot;
-        Job job;
+        // temporary variables -----------------------------------------------------------------------------------------
+        Job inputJob;
+        Job outputJob;
+        Slot inputFromSlot, inputToSlot;
+        Slot outputFromSlot, outputToSlot;
+        Slot empty;
+        int centerX = (maxX - minX) / 2;
+        int centerY = (maxY - minY) / 2;
+        double moveStartTime;
 
-        // print starting positions
+        List<Slot> frontIgnoreSlots = new LinkedList<>();
+        for(Row row: rows.values()){
+
+            // TODO multiple heights when stacked
+
+            frontIgnoreSlots.addAll(row.getLeftMostSlots());
+        }
+        List<Slot> backIgnoreSlots = new LinkedList<>();
+        for(Row row: rows.values()){
+            backIgnoreSlots.addAll(row.getRightMostSlot());
+        }
+
+        // print starting positions ------------------------------------------------------------------------------------
         for(Gantry gantry: gantries) gantry.printStart();
 
+        // handle input and output queues until completion -------------------------------------------------------------
         while (!this.inputJobSequence.isEmpty() || !this.outputJobSequence.isEmpty()){
 
-            // handle potential output before input
+            // reset temporaries ---------------------------------------------------------------------------------------
+            inputJob = null;
+            outputJob = null;
+            inputFromSlot = null;
+            inputToSlot = null;
+            outputFromSlot = null;
+            outputToSlot = null;
+
+            // sync time between gantries ------------------------------------------------------------------------------
+            moveStartTime = Math.max(gantries.get(0).getCurrentTime(), gantries.get(1).getCurrentTime());
+
+            // handle potential output ---------------------------------------------------------------------------------
             if(!this.outputJobSequence.isEmpty() &&
-                    (fromSlot = items.get(outputJobSequence.get(0).getItem().getId()).getSlot()) != null) {
-                job = outputJobSequence.get(0);
-                toSlot = job.getPlace().getSlot();
+                    (outputFromSlot = items.get(outputJobSequence.get(0).getItem().getId()).getSlot()) != null) {
+                outputJob = outputJobSequence.remove(0);
+                outputToSlot = outputJob.getPlace().getSlot();
                 try {
-                    if(fromSlot.isBuried()) unBury(fromSlot);
-                    gantries.get(0).move(job.getItem(), fromSlot, toSlot);
-                    outputJobSequence.remove(0);
-                } catch (SlotAlreadyHasItemException e) {
-                    // should not occur, for debug purposes only
-                    e.printStackTrace();
+                    if(outputFromSlot.isBuried()) moveStartTime = unBury(outputFromSlot);
                 } catch (SlotUnreachableException e) {
                     // should not occur with one gantry
                     e.printStackTrace();
                 }
             }
-            else if(!this.inputJobSequence.isEmpty()) {
-                job = inputJobSequence.get(0);
-                fromSlot = job.getPickup().getSlot();
+
+            // handle potential input ----------------------------------------------------------------------------------
+            if(!this.inputJobSequence.isEmpty()) {
+                inputJob = inputJobSequence.remove(0);
+                inputFromSlot = inputJob.getPickup().getSlot();
                 try {
-                    toSlot = findEmpty(fromSlot.getCenterX(), fromSlot.getCenterY(), job.getItem(), null);
-                    try {
-                        gantries.get(0).move(job.getItem(), fromSlot, toSlot);
-                        inputJobSequence.remove(0);
-                        if(toSlot.getType() == OUTPUT) outputJobSequence.remove(0);
-                    } catch (SlotAlreadyHasItemException e){
-                        // should not occur, for debug purposes only
-                        e.printStackTrace();
-                        return;
-                    } catch (SlotUnreachableException e){
-                        // should not occur with one gantry
-                        e.printStackTrace();
-                    }
+                    // look for slot from middle of yard ---------------------------------------------------------------
+                    inputToSlot = findEmpty(centerX, centerY, inputJob.getItem(), null);
                 } catch (NoSlotAvailableException e){
                     // should not occur, deadlock if occurs
                     e.printStackTrace();
                 }
             }
+
+            // throw exception if gantries collide ---------------------------------------------------------------------
+            if(outputFromSlot != null &&
+                    inputFromSlot != null &&
+                    Math.abs(outputFromSlot.getCenterX() - inputFromSlot.getCenterX()) < 20){
+
+                // TODO other side of yard, same issue
+
+                try {
+                    gantries.get(0).move(outputFromSlot);
+                    gantries.get(0).pickDropItem(outputFromSlot.getItem());
+                    empty = findEmpty(outputFromSlot.getCenterX(), outputFromSlot.getCenterY(), outputFromSlot.getItem(), frontIgnoreSlots);
+                    gantries.get(0).move(empty);
+                    gantries.get(0).pickDropItem(null);
+                    moveStartTime = gantries.get(0).getCurrentTime();
+
+                    // synchronise times and wait ----------------------------------------------------------------------
+                    gantries.get(1).setCurrentTime(moveStartTime);
+                    gantries.get(1).waitForTime();
+                } catch (SlotUnreachableException e) {
+                    e.printStackTrace();
+                } catch (NoSlotAvailableException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            // move to pickup slot and pickup --------------------------------------------------------------------------
+            // for input gantry ----------------------------------------------------------------------------------------
+            if(inputJob != null) gantryAction(gantries.get(0), inputJob, inputFromSlot, inputJob.getItem(), moveStartTime);
+            else {
+                try {
+                    gantries.get(0).move(inputSlot);
+                } catch (SlotUnreachableException e) {
+                    // shouldn't appear
+                    e.printStackTrace();
+                }
+            }
+            if(outputJob != null) gantryAction(gantries.get(1), outputJob, outputFromSlot, outputJob.getItem(), moveStartTime);
+            else {
+                try {
+                    gantries.get(1).move(outputSlot);
+                } catch (SlotUnreachableException e) {
+                    // shouldn't appear
+                    e.printStackTrace();
+                }
+            }
+
+            // sync gantry times and wait ------------------------------------------------------------------------------
+            moveStartTime = Math.max(gantries.get(0).getCurrentTime(), gantries.get(1).getCurrentTime());
+
+            // move to drop and drop -----------------------------------------------------------------------------------
+            if(inputJob != null) gantryAction(gantries.get(0), inputJob, inputToSlot, null, moveStartTime);
+            if(outputJob != null) gantryAction(gantries.get(1), outputJob, outputToSlot, null, moveStartTime);
         }
         outputWriter.close();
+    }
+
+    private void gantryAction(Gantry gantry, Job job, Slot slot, Item item, double moveStartTime){
+
+        try {
+            if(job != null) {
+                if(gantry.getCurrentTime() < moveStartTime){
+                    gantry.setCurrentTime(moveStartTime);
+                    gantry.waitForTime();
+                }
+                gantry.move(slot);
+                if(item == null){
+                    gantry.getItem().setSlot(slot);
+                }
+                gantry.pickDropItem(item);
+            }
+        } catch (SlotUnreachableException e) {
+            throw new RuntimeException(String.format("job %s: unreachable for gantry 0", job.toString()));
+        } catch (SlotAlreadyHasItemException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -400,61 +497,75 @@ public class Problem {
      * @param slot bottom slot to un-bury.
      * @throws SlotUnreachableException thrown when the slot cannot be reached by the gantry, debug only for one gantry.
      */
-    public void unBury(Slot slot) throws SlotUnreachableException{
+    public double unBury(Slot slot) throws SlotUnreachableException{
+
+        // temporary variables -----------------------------------------------------------------------------------------
         List<Slot> toMove = slot.getAbove();
         toMove.sort(Comparator.naturalOrder());
         Slot empty;
+
+        // move item away from all slots above buried slot -------------------------------------------------------------
         for(Slot slotToMove: toMove){
             try {
                 if(slotToMove.getItem() != null) {
                     empty = findEmpty(slotToMove.getCenterX(), slotToMove.getCenterY(), slotToMove.getItem(), toMove);
-                    gantries.get(0).move(
-                            slotToMove.getItem(),
-                            slotToMove,
-                            empty
-                    );
+
+                    gantries.get(1).move(slotToMove);
+                    gantries.get(1).pickDropItem(slotToMove.getItem());
+                    slotToMove.removeItem();
+                    empty.setItem(gantries.get(1).getItem());
+                    gantries.get(1).move(empty);
+                    gantries.get(1).pickDropItem(null);
                 }
-            } catch (SlotAlreadyHasItemException e) {
-                // should not occur, debug only
-                e.printStackTrace();
             } catch (NoSlotAvailableException e) {
-                // should not occur, deadlock if occurs
+                // should not occur, deadlock if occurs <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                e.printStackTrace();
+            } catch (SlotAlreadyHasItemException e) {
+                // should never occur
                 e.printStackTrace();
             }
         }
+        return gantries.get(1).getCurrentTime();
     }
 
     public Slot findEmpty(int centerX, int centerY, Item toPlace, List<Slot> ignore) throws NoSlotAvailableException{
 
-        // if item to be moved is needed at the output, return output slot
-        if(!outputJobSequence.isEmpty() && outputJobSequence.get(0).getItem() == toPlace){
-            return outputJobSequence.get(0).getPlace().getSlot();
-        }
-
-        // set comparator settings and sort
+        // set comparator settings and sort ----------------------------------------------------------------------------
         comparator.setCenterX(centerX);
         comparator.setCenterY(centerY);
         slots.sort(comparator);
         Slot best = null;
 
+        // start looking for slot --------------------------------------------------------------------------------------
         for (Slot slot: slots) {
             /*
-             condition to be empty:
+             condition to be empty +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                 - have no item
                 - don't be in the ignore list if it exists
                 - be sure to not collapse
                 - be a storage slot
                 - don't be on the same x and y coordinates
+                ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
               */
-            if(slot.getItem() == null && (ignore == null || !ignore.contains(slot)) && slot.willNotCollapse() && slot.getType() == STORAGE &&
+            if(slot.getItem() == null &&
+                    (ignore == null || !ignore.contains(slot)) &&
+                    slot.willNotCollapse() && slot.getType() == STORAGE &&
                     (toPlace.getSlot() == null ||
-                            (slot.getCenterX() != toPlace.getSlot().getCenterX() && slot.getCenterY() != toPlace.getSlot().getCenterY()))){
+                            (slot.getCenterX() != toPlace.getSlot().getCenterX() &&
+                            slot.getCenterY() != toPlace.getSlot().getCenterY()))
+                    ){
                 best = slot;
 
-                // if priority of best location is higher than item to place, return and place item above the best option
+                // no higher priority item buried -> return ------------------------------------------------------------
+
+                // TODO max distance constraint
+
                 if(best.getPriority() > toPlace.getPriority()) return best;
+                // else look for better location -----------------------------------------------------------------------
             }
         }
+
+        // return slot if slot still available -------------------------------------------------------------------------
         if(best != null) return best;
         throw new NoSlotAvailableException();
     }

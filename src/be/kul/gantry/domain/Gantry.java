@@ -16,6 +16,8 @@ public class Gantry {
     private int currentX,currentY;
     private double currentTime;
 
+    private Item item;
+
     private PrintWriter outputWriter;
 
     public Gantry(int id,
@@ -69,6 +71,62 @@ public class Gantry {
         this.outputWriter = outputWriter;
     }
 
+    public int getxMin() {
+        return xMin;
+    }
+
+    public int getxMax() {
+        return xMax;
+    }
+
+    public double getxSpeed() {
+        return xSpeed;
+    }
+
+    public double getySpeed() {
+        return ySpeed;
+    }
+
+    public int getPickupPlaceDuration() {
+        return pickupPlaceDuration;
+    }
+
+    public int getCurrentX() {
+        return currentX;
+    }
+
+    public void setCurrentX(int currentX) {
+        this.currentX = currentX;
+    }
+
+    public int getCurrentY() {
+        return currentY;
+    }
+
+    public void setCurrentY(int currentY) {
+        this.currentY = currentY;
+    }
+
+    public double getCurrentTime() {
+        return currentTime;
+    }
+
+    public void setCurrentTime(double currentTime) {
+        this.currentTime = currentTime;
+    }
+
+    public PrintWriter getOutputWriter() {
+        return outputWriter;
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public void setItem(Item item) {
+        this.item = item;
+    }
+
     public boolean overlapsGantryArea(Gantry g) {   //kijkt of overlap is tussen kranen
         return g.xMin < xMax && xMin < g.xMax;
     }
@@ -88,30 +146,98 @@ public class Gantry {
         return xMin <= s.getCenterX() && s.getCenterX() <= xMax;
     }
 
-    public void move(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException, SlotUnreachableException{
+    /*
         // check if gantry can reach slots, debug only for one gantry
         if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
         if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
 
         // move to required slot and pick up item
-        updateTime(fromSlot);
+        updateTimeDistance(fromSlot);
         outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
         currentTime+=pickupPlaceDuration;
         outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
 
         // move to next slot and drop off item
-        updateTime(toSlot);
+        updateTimeDistance(toSlot);
         outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
         item.setSlot(toSlot);
         currentTime+=pickupPlaceDuration;
         outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+     */
+
+    public void move(Slot toSlot) throws SlotUnreachableException{
+
+        // safety check if slots are reachable, all should be reachable ------------------------------------------------
+        if(toSlot != null && !canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
+
+        // print moves and update time ---------------------------------------------------------------------------------
+        outputWriter.println(String.format(
+                "%d;%.0f;%d;%d;%s",
+                id,
+                currentTime,
+                currentX,
+                currentY,
+                item == null ? "null" : Integer.toString(item.getId()))
+        );
+        updateTimeDistance(toSlot);
+        outputWriter.println(String.format(
+                "%d;%.0f;%d;%d;%s",
+                id,
+                currentTime,
+                currentX,
+                currentY,
+                item == null ? "null" : Integer.toString(item.getId()))
+        );
+    }
+
+    /**
+     * Method to pick up an item, provide null item to drop off item currently in gantry.
+     *
+     * @param item item to pick up
+     */
+    public void pickDropItem(Item item){
+
+        if(item != null && item.getId() == 1578){
+            System.out.println("break");
+        }
+        if(this.item != null && this.item.getId() == 1578){
+            System.out.println("break");
+        }
+
+        // drop if gantry has item -------------------------------------------------------------------------------------
+        if(item == null){
+            currentTime+=pickupPlaceDuration;
+            outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+            this.item = null;
+        }
+        // pickup if gantry doesn't have item --------------------------------------------------------------------------
+        else {
+            try {
+                this.item = item;
+                currentTime += pickupPlaceDuration;
+                outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+            } catch (NullPointerException e){
+                System.out.println("error");
+            }
+        }
+    }
+
+    public void waitForTime(){
+        outputWriter.println(String.format(
+                "%d;%.0f;%d;%d;%d",
+                id,
+                currentTime,
+                currentX,
+                currentY,
+                item != null ? item.getId() : null)
+        );
     }
 
     public void printStart(){
         outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
     }
 
-    public void updateTime(Slot slot){
+    public void updateTimeDistance(Slot slot){
         // update time after moving
         currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
         currentX = slot.getCenterX();

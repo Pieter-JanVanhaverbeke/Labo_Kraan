@@ -12,9 +12,9 @@ public class Main {
 
         String input, output;
         if(args.length > 0) input = args[0];
-        else input = "1_10_100_4_FALSE_65_50_50.json";
+        else input = "2_10_100_4_TRUE_65_50_50.json";
         if(args.length > 1) output = args[1];
-        else output = "output_1_FALSE.csv";
+        else output = "output_2_TRUE.csv";
 
         try {
             Problem problem = Problem.fromJson(new File(input));
