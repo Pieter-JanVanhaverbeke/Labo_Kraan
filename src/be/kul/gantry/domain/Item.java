@@ -11,7 +11,8 @@ public class Item {
 
     public Item(int id) {
         this.id = id;
-        priority = Integer.MAX_VALUE; //begint met laagste prioriteit, dus hoogste nummer
+        // highest priority -> lowest priority number
+        priority = Integer.MAX_VALUE;
     }
 
     public int getId() {
@@ -31,7 +32,7 @@ public class Item {
     }
 
     public void setSlot(Slot slot) throws SlotAlreadyHasItemException{
-        // bidirectionally link item and slot in case slot is not output slot
+        // bidirectionally link item and slot in case slot is not output slot ------------------------------------------
         if (this.slot != null) this.slot.setItem(null);
         this.slot = slot;
         if (slot.getType() != Slot.SlotType.OUTPUT) slot.setItem(this);

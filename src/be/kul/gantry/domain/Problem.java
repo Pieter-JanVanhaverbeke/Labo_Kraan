@@ -346,12 +346,13 @@ public class Problem {
         Slot fromSlot, toSlot;
         Job job;
 
-        // print starting positions
+        // print starting positions ------------------------------------------------------------------------------------
         for(Gantry gantry: gantries) gantry.printStart();
 
+        // process until all queues are empty --------------------------------------------------------------------------
         while (!this.inputJobSequence.isEmpty() || !this.outputJobSequence.isEmpty()){
 
-            // handle potential output before input
+            // check for output requests -------------------------------------------------------------------------------
             if(!this.outputJobSequence.isEmpty() &&
                     (fromSlot = items.get(outputJobSequence.get(0).getItem().getId()).getSlot()) != null) {
                 job = outputJobSequence.get(0);
@@ -368,6 +369,7 @@ public class Problem {
                     e.printStackTrace();
                 }
             }
+            // else check for input requests ---------------------------------------------------------------------------
             else if(!this.inputJobSequence.isEmpty()) {
                 job = inputJobSequence.get(0);
                 fromSlot = job.getPickup().getSlot();
@@ -401,9 +403,13 @@ public class Problem {
      * @throws SlotUnreachableException thrown when the slot cannot be reached by the gantry, debug only for one gantry.
      */
     public void unBury(Slot slot) throws SlotUnreachableException{
+
+        // temporary variables -----------------------------------------------------------------------------------------
         List<Slot> toMove = slot.getAbove();
         toMove.sort(Comparator.naturalOrder());
         Slot empty;
+
+        // empty each slot that has to be empty ------------------------------------------------------------------------
         for(Slot slotToMove: toMove){
             try {
                 if(slotToMove.getItem() != null) {
@@ -424,14 +430,25 @@ public class Problem {
         }
     }
 
+    /**
+     * Method to search for the best suitable empty slot. Algorithm will attempt not to stack an item on top of another
+     * item with a higher priority (lower priority number and will search for the closest available slot.
+     *
+     * @param centerX   current gantry position x
+     * @param centerY   current gantry position y
+     * @param toPlace   item to find a slot for
+     * @param ignore    list of slots that should not be filled
+     * @return          the best fitting empty slot
+     * @throws NoSlotAvailableException exception indicating no free slot could be found, this will cause deadlock
+     */
     public Slot findEmpty(int centerX, int centerY, Item toPlace, List<Slot> ignore) throws NoSlotAvailableException{
 
-        // if item to be moved is needed at the output, return output slot
+        // if item to be moved is needed at the output, return output slot ---------------------------------------------
         if(!outputJobSequence.isEmpty() && outputJobSequence.get(0).getItem() == toPlace){
             return outputJobSequence.get(0).getPlace().getSlot();
         }
 
-        // set comparator settings and sort
+        // set comparator settings and sort ----------------------------------------------------------------------------
         comparator.setCenterX(centerX);
         comparator.setCenterY(centerY);
         slots.sort(comparator);
