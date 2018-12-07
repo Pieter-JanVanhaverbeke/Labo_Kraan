@@ -450,6 +450,7 @@ public class Problem {
                     e.printStackTrace();
                 }
             }
+            // for output gantry ---------------------------------------------------------------------------------------
             if(outputJob != null) gantryAction(gantries.get(1), outputJob, outputFromSlot, outputJob.getItem(), moveStartTime);
             else {
                 try {
@@ -513,7 +514,7 @@ public class Problem {
                     gantries.get(1).move(slotToMove);
                     gantries.get(1).pickDropItem(slotToMove.getItem());
                     slotToMove.removeItem();
-                    empty.setItem(gantries.get(1).getItem());
+                    gantries.get(1).getItem().setSlot(empty);
                     gantries.get(1).move(empty);
                     gantries.get(1).pickDropItem(null);
                 }

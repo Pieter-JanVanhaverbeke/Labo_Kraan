@@ -146,25 +146,6 @@ public class Gantry {
         return xMin <= s.getCenterX() && s.getCenterX() <= xMax;
     }
 
-    /*
-        // check if gantry can reach slots, debug only for one gantry
-        if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
-        if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
-
-        // move to required slot and pick up item
-        updateTimeDistance(fromSlot);
-        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
-        currentTime+=pickupPlaceDuration;
-        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
-
-        // move to next slot and drop off item
-        updateTimeDistance(toSlot);
-        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
-        item.setSlot(toSlot);
-        currentTime+=pickupPlaceDuration;
-        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
-     */
-
     public void move(Slot toSlot) throws SlotUnreachableException{
 
         // safety check if slots are reachable, all should be reachable ------------------------------------------------
@@ -196,13 +177,6 @@ public class Gantry {
      * @param item item to pick up
      */
     public void pickDropItem(Item item){
-
-        if(item != null && item.getId() == 1578){
-            System.out.println("break");
-        }
-        if(this.item != null && this.item.getId() == 1578){
-            System.out.println("break");
-        }
 
         // drop if gantry has item -------------------------------------------------------------------------------------
         if(item == null){
