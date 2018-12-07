@@ -385,111 +385,28 @@ public class Problem {
             outputFromSlot = null;
             outputToSlot = null;
 
-            // sync time between gantries ------------------------------------------------------------------------------
-            moveStartTime = Math.max(gantries.get(0).getCurrentTime(), gantries.get(1).getCurrentTime());
+            // get input job if gantry is waiting and still inputs left ------------------------------------------------
+            // gantry 0 only gantry to be able to reach input ----------------------------------------------------------
+            if (!inputJobSequence.isEmpty() && gantries.get(0).isAvailable()) {
 
-            // handle potential output ---------------------------------------------------------------------------------
-            if(!this.outputJobSequence.isEmpty() &&
-                    (outputFromSlot = items.get(outputJobSequence.get(0).getItem().getId()).getSlot()) != null) {
-                outputJob = outputJobSequence.remove(0);
-                outputToSlot = outputJob.getPlace().getSlot();
-                try {
-                    if(outputFromSlot.isBuried()) moveStartTime = unBury(outputFromSlot);
-                } catch (SlotUnreachableException e) {
-                    // should not occur with one gantry
-                    e.printStackTrace();
-                }
             }
 
-            // handle potential input ----------------------------------------------------------------------------------
-            if(!this.inputJobSequence.isEmpty()) {
-                inputJob = inputJobSequence.remove(0);
-                inputFromSlot = inputJob.getPickup().getSlot();
-                try {
-                    // look for slot from middle of yard ---------------------------------------------------------------
-                    inputToSlot = findEmpty(centerX, centerY, inputJob.getItem(), null);
-                } catch (NoSlotAvailableException e){
-                    // should not occur, deadlock if occurs
-                    e.printStackTrace();
-                }
+            // get output job if gantry is waiting and still outputs left ----------------------------------------------
+            // gantry 1 only gantry to be able to reach output ---------------------------------------------------------
+            if (!outputJobSequence.isEmpty() && gantries.get(1).isAvailable()) {
+                // check if item is buried -----------------------------------------------------------------------------
             }
 
-            // throw exception if gantries collide ---------------------------------------------------------------------
-            if(outputFromSlot != null &&
-                    inputFromSlot != null &&
-                    Math.abs(outputFromSlot.getCenterX() - inputFromSlot.getCenterX()) < 20){
-
-                // TODO other side of yard, same issue
-
-                try {
-                    gantries.get(0).move(outputFromSlot);
-                    gantries.get(0).pickDropItem(outputFromSlot.getItem());
-                    empty = findEmpty(outputFromSlot.getCenterX(), outputFromSlot.getCenterY(), outputFromSlot.getItem(), frontIgnoreSlots);
-                    gantries.get(0).move(empty);
-                    gantries.get(0).pickDropItem(null);
-                    moveStartTime = gantries.get(0).getCurrentTime();
-
-                    // synchronise times and wait ----------------------------------------------------------------------
-                    gantries.get(1).setCurrentTime(moveStartTime);
-                    gantries.get(1).waitForTime();
-                } catch (SlotUnreachableException e) {
-                    e.printStackTrace();
-                } catch (NoSlotAvailableException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            // move to pickup slot and pickup --------------------------------------------------------------------------
-            // for input gantry ----------------------------------------------------------------------------------------
-            if(inputJob != null) gantryAction(gantries.get(0), inputJob, inputFromSlot, inputJob.getItem(), moveStartTime);
-            else {
-                try {
-                    gantries.get(0).move(inputSlot);
-                } catch (SlotUnreachableException e) {
-                    // shouldn't appear
-                    e.printStackTrace();
-                }
-            }
-            // for output gantry ---------------------------------------------------------------------------------------
-            if(outputJob != null) gantryAction(gantries.get(1), outputJob, outputFromSlot, outputJob.getItem(), moveStartTime);
-            else {
-                try {
-                    gantries.get(1).move(outputSlot);
-                } catch (SlotUnreachableException e) {
-                    // shouldn't appear
-                    e.printStackTrace();
-                }
-            }
-
-            // sync gantry times and wait ------------------------------------------------------------------------------
-            moveStartTime = Math.max(gantries.get(0).getCurrentTime(), gantries.get(1).getCurrentTime());
-
-            // move to drop and drop -----------------------------------------------------------------------------------
-            if(inputJob != null) gantryAction(gantries.get(0), inputJob, inputToSlot, null, moveStartTime);
-            if(outputJob != null) gantryAction(gantries.get(1), outputJob, outputToSlot, null, moveStartTime);
+            // tick time -----------------------------------------------------------------------------------------------
         }
         outputWriter.close();
     }
 
-    private void gantryAction(Gantry gantry, Job job, Slot slot, Item item, double moveStartTime){
+    /**
+     * Method to simulate the time flow, will call actions on gantries.
+     */
+    private void tick() {
 
-        try {
-            if(job != null) {
-                if(gantry.getCurrentTime() < moveStartTime){
-                    gantry.setCurrentTime(moveStartTime);
-                    gantry.waitForTime();
-                }
-                gantry.move(slot);
-                if(item == null){
-                    gantry.getItem().setSlot(slot);
-                }
-                gantry.pickDropItem(item);
-            }
-        } catch (SlotUnreachableException e) {
-            throw new RuntimeException(String.format("job %s: unreachable for gantry 0", job.toString()));
-        } catch (SlotAlreadyHasItemException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
