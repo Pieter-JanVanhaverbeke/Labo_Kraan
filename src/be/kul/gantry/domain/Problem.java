@@ -407,20 +407,17 @@ public class Problem {
                 inputFromSlot = inputJob.getPickup().getSlot();
                 try {
                     // look for slot from middle of yard ---------------------------------------------------------------
-                    inputToSlot = findEmpty(centerX, centerY, inputJob.getItem(), null);
+                    inputToSlot = findEmpty(centerX, centerY, inputJob.getItem(), backIgnoreSlots);
                 } catch (NoSlotAvailableException e){
                     // should not occur, deadlock if occurs
                     e.printStackTrace();
                 }
             }
 
-            // throw exception if gantries collide ---------------------------------------------------------------------
+            // prevent collision near inout slot -----------------------------------------------------------------------
             if(outputFromSlot != null &&
                     inputFromSlot != null &&
                     Math.abs(outputFromSlot.getCenterX() - inputFromSlot.getCenterX()) < 20){
-
-                // TODO other side of yard, same issue
-
                 try {
                     gantries.get(0).move(outputFromSlot);
                     gantries.get(0).pickDropItem(outputFromSlot.getItem());
