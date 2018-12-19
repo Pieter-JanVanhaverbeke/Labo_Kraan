@@ -404,4 +404,55 @@ public class Gantry {
             if (slot.getCenterX() > ignoreBoundUpper) ignoreBoundUpper = slot.getCenterX();
         }
     }
+
+    // =================================================================================================================
+    // single move =====================================================================================================
+
+    /**
+     * Moves gantry to first slot, picks up item, moves gantry to second slot and drops item. Also updates
+     * bidirectional coupling of item and slot.
+     *
+     * @param item      item to move
+     * @param fromSlot  first slot
+     * @param toSlot    scond slot
+     * @throws SlotAlreadyHasItemException  thrown when the slot where item is attempted to be put already has one
+     * @throws SlotUnreachableException     thrown if gantry can't reach slot
+     */
+    public void singleMove(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException, SlotUnreachableException{
+
+        // check if gantry can reach slots, debug only for one gantry --------------------------------------------------
+        if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
+        if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
+
+        // move to required slot and pick up item ----------------------------------------------------------------------
+        updateTime(fromSlot);
+        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+        currentTime+=pickupPlaceDuration;
+        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+
+        // move to next slot and drop off item -------------------------------------------------------------------------
+        updateTime(toSlot);
+        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
+        item.setSlot(toSlot);
+        currentTime+=pickupPlaceDuration;
+        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+    }
+
+    /**
+     * updates time of gantry according to the x and y speeds and updates gantry position
+     *
+     * @param slot  slot where gantry is moving to
+     */
+    public void updateTime(Slot slot){
+        currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
+        currentX = slot.getCenterX();
+        currentY = slot.getCenterY();
+    }
+
+    /**
+     * prints out starting position for the beginning of the algorithm
+     */
+    public void printStart(){
+        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+    }
 }
