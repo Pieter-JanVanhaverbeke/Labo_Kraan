@@ -34,7 +34,7 @@ public class Item {
         // bidirectionally link item and slot in case slot is not output slot
         if (this.slot != null) this.slot.setItem(null);
         this.slot = slot;
-        if (slot.getType() != Slot.SlotType.OUTPUT) slot.setItem(this);
+        if (slot.getType() != Slot.SlotType.OUTPUT && slot.getItem() != this) slot.setItem(this);
     }
 
     @Override

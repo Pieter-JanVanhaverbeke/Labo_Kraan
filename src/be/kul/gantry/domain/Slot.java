@@ -8,9 +8,6 @@ import java.util.List;
  */
 public class Slot implements Comparable<Slot>{
 
-    //TODO Linker, rechter en parent node
-    //TODO Slots in boomstructuur
-
     private Slot leftParent;                    //ieder slot heeft 2 kinderen en 2 parrents, bovenste slots hebben geen parrents
     private Slot rightParent;
     private Slot leftChild;
@@ -32,6 +29,19 @@ public class Slot implements Comparable<Slot>{
         this.z = z;
         this.item = item;
         this.type = type;
+    }
+
+    public Slot(Slot slot) {
+        this.id = slot.id;
+        this.centerX = slot.centerX;
+        this.centerY = slot.centerY;
+        this.xMin = slot.xMin;
+        this.xMax = slot.xMax;
+        this.yMin = slot.yMin;
+        this.yMax = slot.yMax;
+        this.z = slot.z;
+        this.item = null;
+        this.type = slot.type;
     }
 
     public int getId() {
