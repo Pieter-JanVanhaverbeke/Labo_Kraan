@@ -82,7 +82,7 @@ public class Slot implements Comparable<Slot>{
 
     public void setItem(Item item) throws SlotAlreadyHasItemException{
         if(this.item == null || item == null) this.item = item;
-        else throw new SlotAlreadyHasItemException(String.valueOf(item.getId()));
+        else if (this.item != item) throw new SlotAlreadyHasItemException(String.valueOf(item.getId()));
     }
 
     public SlotType getType() {
@@ -193,6 +193,12 @@ public class Slot implements Comparable<Slot>{
             above.addAll(this.rightParent.getAbove());
         }
         return above;
+    }
+
+    public boolean hasChild(Slot ignore) {
+        return leftChild == ignore || rightChild == ignore ||
+                (leftChild != null && leftChild.hasChild(ignore)) ||
+                (rightChild != null && rightChild.hasChild(ignore));
     }
 
     public static enum SlotType {

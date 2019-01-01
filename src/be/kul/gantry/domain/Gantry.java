@@ -95,14 +95,6 @@ public class Gantry {
         this.outputWriter = outputWriter;
     }
 
-    public int getxMin() {
-        return xMin;
-    }
-
-    public int getxMax() {
-        return xMax;
-    }
-
     public double getxSpeed() {
         return xSpeed;
     }
@@ -232,7 +224,7 @@ public class Gantry {
      */
     public int moveTo(Slot slot) {
         double start = currentTime;
-        updateTimeDistance(slot.getCenterX(), currentY);
+        updateTimeDistance(slot.getCenterX(), slot.getCenterY());
         print();
         return (int) (currentTime - start);
     }
@@ -261,13 +253,13 @@ public class Gantry {
      */
     public void print() {
         outputWriter.println(String.format(
-                "%d:%f:%d:%d:%s",
+                "%d;%.2f;%d;%d;%s",
                 id,
                 currentTime,
                 currentX,
                 currentY,
                 item == null ? "null" : String.valueOf(item.getId())
-        ));
+        ).replace(",", "."));
     }
 
     /**
@@ -379,13 +371,12 @@ public class Gantry {
         currentY = (int) (currentY - nextY < 0 ?
                 Math.min(currentY + timeToAct * ySpeed, nextY) :
                 Math.max(currentY - timeToAct * ySpeed, nextY));
-        currentTime += Math.max(Math.abs(nextX - currentX) / xSpeed, Math.abs(nextX - currentY) / ySpeed);
+        currentTime += timeToAct;
         return currentX == nextX && currentY == nextY;
     }
 
     /**
-     * Method to append a sequence of jobs to the priority to do list of the gantry. Used in combination with the
-     * {@link Problem#unBury(Slot, Gantry, List)} method.
+     * Method to append a sequence of jobs to the to do list of the gantry.
      *
      * @param unBurySlot    id of the slot being unburied
      * @param sequence      sequence of jobs to append
