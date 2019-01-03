@@ -14,7 +14,7 @@ public class Gantry {
 
     // final fields ----------------------------------------------------------------------------------------------------
     private final int id;
-    private final int xMin,xMax;
+    private int xMin,xMax;
     private final int startX,startY;
     private final double xSpeed,ySpeed;
     private final int pickupPlaceDuration;
@@ -73,6 +73,14 @@ public class Gantry {
 
     public int getXMin() {
         return xMin;
+    }
+
+    public void setxMin(int xMin) {
+        this.xMin = xMin;
+    }
+
+    public void setxMax(int xMax) {
+        this.xMax = xMax;
     }
 
     public int getStartX() {
@@ -241,10 +249,9 @@ public class Gantry {
      * @return              time taken to move
      */
     public int moveTo(int centerX, int centerY, int timeNeeded) {
-        double start = currentTime;
-        moveFor(timeNeeded, centerX, centerY);
+        int time = moveFor(timeNeeded, centerX, centerY);
         print();
-        return (int) (currentTime - start);
+        return time;
     }
 
     /**
@@ -314,7 +321,7 @@ public class Gantry {
             item = null;
         } else {
             item = slot.getItem();
-            slot.setItem(null);
+            item.setSlot(null);
             if (slot.getId() == unBurySlot) {
                 ignore.clear();
                 unBurySlot = -1;
@@ -335,6 +342,7 @@ public class Gantry {
      */
     public void waitForOther(int time) {
         currentTime += time;
+        print();
     }
 
     /**
@@ -364,15 +372,26 @@ public class Gantry {
      *
      * @return          true if the gantry managed to reach it's pick up or drop off
      */
-    public boolean moveFor(int timeToAct, int nextX, int nextY) {
+    public int moveFor(int timeToAct, int nextX, int nextY) {
+        int startX = currentX;
+        int startY = currentY;
         currentX = (int) (currentX - nextX < 0 ?
                 Math.min(currentX + timeToAct * xSpeed, nextX) :
                 Math.max(currentX - timeToAct * xSpeed, nextX));
         currentY = (int) (currentY - nextY < 0 ?
                 Math.min(currentY + timeToAct * ySpeed, nextY) :
                 Math.max(currentY - timeToAct * ySpeed, nextY));
-        currentTime += timeToAct;
-        return currentX == nextX && currentY == nextY;
+        if (currentX == nextX && currentY == nextY) {
+            int time = (int) Math.max(
+                    Math.abs(currentX - startX) / xSpeed,
+                    Math.abs(currentY - startY) / ySpeed
+            );
+            currentTime += time;
+            return time;
+        } else {
+            currentTime += timeToAct;
+            return 0;
+        }
     }
 
     /**

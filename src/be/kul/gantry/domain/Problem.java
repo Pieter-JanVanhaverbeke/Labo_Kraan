@@ -37,6 +37,9 @@ public class Problem {
     private HashMap<Integer, Row> rows;
     private EmptySlotComparator comparator;
 
+    private int sharedMinX;
+    private int sharedMaxX;
+
     private Slot outputSlot;
     private Slot inputSlot;
 
@@ -69,6 +72,16 @@ public class Problem {
             temp.removeAll(sortedSlots);
             this.rows.put(y, new Row(sortedSlots, maxLevels, storageMinX, storageMaxX));
         }
+
+        sharedMinX = Integer.MIN_VALUE;
+        sharedMaxX = Integer.MAX_VALUE;
+        for (Gantry gantry: gantries) {
+            gantry.setxMin(gantry.getXMin() + 5);
+            gantry.setxMax(gantry.getXMax() - 5);
+            if (gantry.getXMax() < sharedMaxX) sharedMaxX = gantry.getXMax();
+            else if (gantry.getXMin() > sharedMinX) sharedMinX = gantry.getXMin();
+        }
+
         comparator = new EmptySlotComparator();
         toIgnore = new LinkedList<>();
     }
@@ -356,16 +369,86 @@ public class Problem {
         for(Gantry gantry: gantries) gantry.print();
 
         // tick time ---------------------------------------------------------------------------------------------------
-        while (!gantries.get(0).getTodo().isEmpty() || !gantries.get(1).getTodo().isEmpty() ||
-                !outputJobSequence.isEmpty()) {
+        boolean done = false;
+        do {
+            // check if done -------------------------------------------------------------------------------------------
+            done = true;
+            for (Gantry gantry: gantries) {
+                if (!gantry.getTodo().isEmpty()) {
+                    done = false;
+                    break;
+                }
+            }
+            if (!outputJobSequence.isEmpty()) done = false;
+            if (!inputJobSequence.isEmpty()) done = false;
+            if (done) break;
+
             try {
+                load();
                 tick();
             } catch (SlotAlreadyHasItemException | NoSlotAvailableException | SlotUnreachableException e) {
                 System.out.println("algorithm error");
                 System.exit(-1);
             }
-        }
+        } while (!done);
         outputWriter.close();
+    }
+
+    private void load() throws SlotAlreadyHasItemException {
+        // get new job from output job sequence if any left --------------------------------------------------------
+        if (!outputJobSequence.isEmpty() &&
+                items.get(outputJobSequence.get(0).getItem().getId()).getSlot() != null) {
+            for (Gantry gantry: gantries) {
+                if (gantry.isAvailable() && gantry.canReachSlot(outputJobSequence.get(0).getPlace().getSlot())) {
+                    gantry.addJobTodo(new int[]{
+                            outputJobSequence.get(0).getItem().getId(),
+                            items.get(outputJobSequence.get(0).getItem().getId()).getSlot().getId(),
+                            outputJobSequence.get(0).getItem().getPriority()
+                    });
+                    gantry.addJobTodo(new int[]{
+                            outputJobSequence.get(0).getItem().getId(),
+                            outputJobSequence.get(0).getPlace().getSlot().getId(),
+                            outputJobSequence.get(0).getItem().getPriority()
+                    });
+                    outputJobSequence.remove(0);
+                    break;
+                }
+            }
+        }
+        // all inputs can be immediately handled -----------------------------------------------------------------------
+        if (!inputJobSequence.isEmpty()) {
+            for (Gantry gantry: gantries) {
+                if (gantry.isAvailable() && gantry.canReachSlot(inputJobSequence.get(0).getPickup().getSlot())) {
+                    inputJobSequence.get(0).getItem().setSlot(
+                            inputJobSequence.get(0).getPickup().getSlot()
+                    );
+                    // add job to gantry's to do list --------------------------------------------------------------------------
+                    gantry.addJobTodo(new int[]{
+                            inputJobSequence.get(0).getItem().getId(),
+                            inputJobSequence.get(0).getPickup().getSlot().getId(),
+                            inputJobSequence.get(0).getItem().getPriority()
+                    });
+                    if (!outputJobSequence.isEmpty() &&
+                            outputJobSequence.get(0).getItem().getId() == inputJobSequence.get(0).getItem().getId() &&
+                            gantry.canReachSlot(outputSlot)) {
+                        gantry.addJobTodo(new int[]{
+                                inputJobSequence.get(0).getItem().getId(),
+                                outputSlot.getId(),
+                                -1
+                        });
+                        outputJobSequence.remove(0);
+                    } else {
+                        gantry.addJobTodo(new int[]{
+                                inputJobSequence.get(0).getItem().getId(),
+                                -1,
+                                -1
+                        });
+                    }
+                    inputJobSequence.remove(0);
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -373,94 +456,129 @@ public class Problem {
      */
     private void tick() throws SlotAlreadyHasItemException, NoSlotAvailableException, SlotUnreachableException {
 
-        // find total time gantries can safely move --------------------------------------------------------------------
-        // gantries moving in the same direction can collide -----------------------------------------------------------
-        // check if they might collide ---------------------------------------------------------------------------------
-        Slot firstGantrySlot = getNextFirstGantrySlot();
-        Slot secondGantrySlot = getNextSecondGantrySlot();
+        LinkedList<Slot> todo = new LinkedList<>();
+        for (Gantry gantry: gantries) todo.add(getNextSlot(gantry));
 
-        if (firstGantrySlot == null && secondGantrySlot == null) return;
+        if (todo.size() == 1) {
+            if (todo.getFirst() == null) return;
 
-        if (firstGantrySlot == null) {
-            // move other gantry out of the way ------------------------------------------------------------------------
-            if (gantries.get(0).getCurrentX() > secondGantrySlot.getCenterX() - safetyDistance) {
-                gantries.get(0).moveTo(
-                        secondGantrySlot.getCenterX() - safetyDistance,
-                        gantries.get(0).getCurrentY(),
-                        Integer.MAX_VALUE
-                );
-            }
-
-            // handle second gantry ------------------------------------------------------------------------------------
-            gantries.get(1).moveTo(secondGantrySlot);
-            gantries.get(1).pickupDrop(secondGantrySlot);
-            gantries.get(1).getTodo().removeFirst();
-            toIgnore.remove(secondGantrySlot);
-        } else if (secondGantrySlot == null) {
-            // move other gantry out of the way ------------------------------------------------------------------------
-            if (gantries.get(1).getCurrentX() < firstGantrySlot.getCenterX() + safetyDistance) {
-                gantries.get(1).moveTo(
-                        firstGantrySlot.getCenterX() + safetyDistance,
-                        gantries.get(0).getCurrentY(),
-                        Integer.MAX_VALUE
-                );
-            }
-
-            // handle second gantry ------------------------------------------------------------------------------------
-            gantries.get(0).moveTo(firstGantrySlot);
-            gantries.get(0).pickupDrop(firstGantrySlot);
-            gantries.get(0).getTodo().removeFirst();
-            toIgnore.remove(firstGantrySlot);
-        } else if (gantries.get(0).getCurrentX() < firstGantrySlot.getCenterX() &&
-                gantries.get(1).getCurrentX() > secondGantrySlot.getCenterX() &&
-                secondGantrySlot.getCenterX() - firstGantrySlot.getCenterX() <= safetyDistance) {
-
-            // move shortest action and make other gantry wait ---------------------------------------------------------
-            if (Math.abs(firstGantrySlot.getCenterX() - gantries.get(0).getCurrentX()) <
-                    Math.abs(secondGantrySlot.getCenterX() - gantries.get(1).getCurrentX())) {
-                time += avoidCollision(gantries.get(0), firstGantrySlot, gantries.get(1), secondGantrySlot);
-            } else {
-                time += avoidCollision(gantries.get(1), secondGantrySlot, gantries.get(0), firstGantrySlot);
-            }
+            // handle single gantry ------------------------------------------------------------------------------------
+            action(gantries.get(0), todo.getFirst());
         } else {
-            // move until shortest action completed --------------------------------------------------------------------
-            if (gantries.get(0).actionTime(
-                    firstGantrySlot.getCenterX(),
-                    firstGantrySlot.getCenterY()
-            ) < gantries.get(1).actionTime(
-                    secondGantrySlot.getCenterX(),
-                    secondGantrySlot.getCenterY()
-            )) {
-                time += handle(gantries.get(0), firstGantrySlot, gantries.get(1), secondGantrySlot);
+            if (todo.getFirst() == null && todo.getLast() == null) return;
+
+            if (todo.getFirst() == null) {
+                // move other gantry out of the way --------------------------------------------------------------------
+                int toWait =
+                        (int) gantries.get(1).actionTime(todo.getLast().getCenterX(), todo.getLast().getCenterY());
+                if (gantries.size() > 1 &&
+                        gantries.get(0).getCurrentX() > todo.getLast().getCenterX() - safetyDistance) {
+                    toWait -= gantries.get(0).moveTo(
+                            todo.getLast().getCenterX() - safetyDistance,
+                            gantries.get(0).getCurrentY(),
+                            toWait
+                    );
+                }
+                gantries.get(0).waitForOther(toWait);
+
+                // handle second gantry --------------------------------------------------------------------------------
+                action(gantries.get(1), todo.getLast());
+            } else if (todo.getLast() == null) {
+                // move other gantry out of the way --------------------------------------------------------------------
+                int toWait =
+                        (int) gantries.get(0).actionTime(todo.getFirst().getCenterX(), todo.getFirst().getCenterY());
+                if (gantries.size() > 1 &&
+                        gantries.get(1).getCurrentX() < todo.getFirst().getCenterX() + safetyDistance) {
+                    toWait -= gantries.get(1).moveTo(
+                            todo.getFirst().getCenterX() + safetyDistance,
+                            gantries.get(1).getCurrentY(),
+                            toWait
+                    );
+                }
+                gantries.get(1).waitForOther(toWait);
+
+                // handle second gantry --------------------------------------------------------------------------------
+                action(gantries.get(0), todo.getFirst());
+            } else if (todo.getLast().getCenterX() - todo.getFirst().getCenterX() <= safetyDistance) {
+                // move shortest action and make other gantry wait -----------------------------------------------------
+                if (Math.abs(todo.getFirst().getCenterX() - gantries.get(0).getCurrentX()) <
+                        Math.abs(todo.getLast().getCenterX() - gantries.get(1).getCurrentX())) {
+                    time += avoidCollision(gantries.get(0), todo.getFirst(), gantries.get(1), todo.getLast());
+                } else {
+                    time += avoidCollision(gantries.get(1), todo.getLast(), gantries.get(0), todo.getFirst());
+                }
             } else {
-                time += handle(gantries.get(1), secondGantrySlot, gantries.get(0), firstGantrySlot);
+                // move until shortest action completed ----------------------------------------------------------------
+                if (gantries.get(0).actionTime(todo.getFirst().getCenterX(), todo.getFirst().getCenterY()) <
+                        gantries.get(1).actionTime(todo.getLast().getCenterX(), todo.getLast().getCenterY())) {
+                    time += handle(gantries.get(0), todo.getFirst(), gantries.get(1), todo.getLast());
+                } else {
+                    time += handle(gantries.get(1), todo.getLast(), gantries.get(0), todo.getFirst());
+                }
             }
         }
     }
 
+    private void action(Gantry gantry, Slot slotTodo) throws SlotAlreadyHasItemException {
+        gantry.moveTo(slotTodo);
+        gantry.pickupDrop(slotTodo);
+        gantry.getTodo().removeFirst();
+        toIgnore.remove(slotTodo);
+    }
+
     private int handle(Gantry movingGantry, Slot movingGantrySlot, Gantry waitingGantry, Slot waitingGantrySlot)
-            throws SlotAlreadyHasItemException, NoSlotAvailableException {
+            throws SlotAlreadyHasItemException, NoSlotAvailableException, SlotUnreachableException {
 
         int timeToAct;
-        //complete shortest action and move other gantry -----------------------------------------------------------
-        timeToAct = movingGantry.moveTo(movingGantrySlot);
-        timeToAct += movingGantry.pickupDrop(movingGantrySlot);
-        movingGantry.getTodo().removeFirst();
-        toIgnore.remove(movingGantrySlot);
-        if (waitingGantry.moveFor(timeToAct, waitingGantrySlot.getCenterX(), waitingGantrySlot.getCenterY())) {
-            // drop off or pick up item and move other gantry ------------------------------------------------------
+
+        // perform action on moving gantry -----------------------------------------------------------------------------
+        timeToAct = moveAndDrop(movingGantry, movingGantrySlot);
+
+        // move waiting gantry -----------------------------------------------------------------------------------------
+        int timeNeeded;
+        if ((timeNeeded =
+                waitingGantry.moveFor(timeToAct, waitingGantrySlot.getCenterX(), waitingGantrySlot.getCenterY())) > 0) {
+            // drop off or pick up item and move other gantry ----------------------------------------------------------
             waitingGantry.print();
-            int timeNeeded =
-                    (int) waitingGantry.actionTime(waitingGantrySlot.getCenterX(), waitingGantrySlot.getCenterY()) -
-                            timeToAct -
-                            waitingGantry.pickupDrop(waitingGantrySlot);
+            int timeLeft =  timeToAct - waitingGantry.pickupDrop(waitingGantrySlot) - timeNeeded;
             waitingGantry.getTodo().removeFirst();
             toIgnore.remove(waitingGantrySlot);
-            movingGantrySlot = getNextFirstGantrySlot();
-            if (movingGantrySlot != null) {
-                movingGantry.moveFor(timeNeeded, movingGantrySlot.getCenterX(), movingGantrySlot.getCenterY());
+            if (timeLeft < 0) {
+                timeLeft = Math.abs(timeLeft);
+                movingGantrySlot = getNextSlot(movingGantry);
+                if (movingGantrySlot != null &&
+                        (movingGantry.getId() == 1 ? movingGantrySlot.getCenterX() : - movingGantrySlot.getCenterX()) -
+                        (waitingGantry.getId() == 0 ? waitingGantry.getCurrentX() : - waitingGantry.getCurrentX()) >
+                                safetyDistance) {
+                    int extraWait = timeLeft - movingGantry.moveFor(
+                            timeLeft,
+                            movingGantrySlot.getCenterX(),
+                            movingGantrySlot.getCenterY()
+                    );
+                    movingGantry.print();
+                    if (extraWait > 0) movingGantry.waitForOther(extraWait);
+                } else {
+                    movingGantry.waitForOther(timeLeft);
+                }
+                timeToAct += timeLeft;
+            } else if (timeLeft > 0) {
+                waitingGantrySlot = getNextSlot(waitingGantry);
+                if (waitingGantrySlot != null &&
+                        (movingGantry.getId() == 1 ? movingGantry.getCurrentX() : - movingGantry.getCurrentX()) -
+                        (waitingGantry.getId() == 0 ? waitingGantrySlot.getCenterX() : - waitingGantrySlot.getCenterX())
+                        > safetyDistance) {
+                    int extraWait = timeLeft - waitingGantry.moveFor(
+                            timeLeft,
+                            waitingGantrySlot.getCenterX(),
+                            waitingGantrySlot.getCenterY()
+                    );
+                    waitingGantry.print();
+                    if (extraWait > 0) waitingGantry.waitForOther(extraWait);
+                } else {
+                    waitingGantry.waitForOther(timeLeft);
+                }
+                timeToAct += timeLeft;
             }
-            timeToAct += timeNeeded;
         }
         return timeToAct;
     }
@@ -481,18 +599,24 @@ public class Problem {
         int timeToAct;
         int timeNeeded;
 
-        timeToAct = movingGantry.moveTo(movingGantrySlot);
+        // perform action on moving gantry -----------------------------------------------------------------------------
+        timeToAct = moveAndDrop(movingGantry, movingGantrySlot);
+
         timeNeeded = waitingGantry.moveTo(
-                waitingGantrySlot.getCenterX() + movingGantry.getId() == 0 ? -safetyDistance : safetyDistance,
+                movingGantrySlot.getCenterX() + (movingGantry.getId() == 0 ? safetyDistance : -safetyDistance),
                 waitingGantrySlot.getCenterY(),
                 timeToAct
         );
-        // drop item at first gantry -------------------------------------------------------------------------------
+        waitingGantry.waitForOther(timeToAct - timeNeeded);
+
+        return timeToAct;
+    }
+
+    private int moveAndDrop(Gantry movingGantry, Slot movingGantrySlot) throws SlotAlreadyHasItemException {
+        int timeToAct = movingGantry.moveTo(movingGantrySlot);
         timeToAct += movingGantry.pickupDrop(movingGantrySlot);
         movingGantry.getTodo().removeFirst();
         toIgnore.remove(movingGantrySlot);
-        waitingGantry.waitForOther(timeToAct - timeNeeded);
-
         return timeToAct;
     }
 
@@ -505,7 +629,7 @@ public class Problem {
      *
      * @throws SlotUnreachableException thrown when the slot cannot be reached by the gantry, debug only for one gantry.
      */
-    private void unBury(Slot slot, Gantry gantry) throws SlotUnreachableException{
+    private void unBury(Slot slot, Gantry gantry) {
 
         // temporary variables -----------------------------------------------------------------------------------------
         List<Slot> toMove = slot.getAbove();
@@ -581,88 +705,41 @@ public class Problem {
         throw new NoSlotAvailableException();
     }
 
-    /**
-     * Method to call to decide which slot the first gantry should move to next.
-     *
-     * @return  the slot the gantry will move to
-     * @throws SlotAlreadyHasItemException  thrown to detect algorithmic errors
-     * @throws NoSlotAvailableException     thrown to detect algorithmic errors
-     */
-    private Slot getNextFirstGantrySlot() throws SlotAlreadyHasItemException, NoSlotAvailableException {
-        Slot firstGantrySlot = null;
-        // all inputs can be immediately handled -----------------------------------------------------------------------
-        if (!inputJobSequence.isEmpty()) {
-            inputJobSequence.get(0).getItem().setSlot(
-                    inputJobSequence.get(0).getPickup().getSlot()
-            );
-            // add job to gantry's to do list --------------------------------------------------------------------------
-            gantries.get(0).addJobTodo(new int[]{
-                    inputJobSequence.get(0).getItem().getId(),
-                    inputJobSequence.get(0).getPickup().getSlot().getId(),
-                    inputJobSequence.get(0).getItem().getPriority()
-            });
-            gantries.get(0).addJobTodo(new int[]{
-                    inputJobSequence.get(0).getItem().getId(),
+    private Slot getNextSlot(Gantry gantry) throws SlotAlreadyHasItemException, NoSlotAvailableException, SlotUnreachableException {
+        if (gantry.getTodo().isEmpty()) return null;
+        Slot returnSlot;
+        if (items.get(gantry.getTodo().getFirst()[0]).getSlot() != null &&
+                !gantry.canReachSlot(items.get(gantry.getTodo().getFirst()[0]).getSlot())) {
+            inputJobSequence.add(0, new Job(
                     -1,
-                    -1
-            });
-            inputJobSequence.remove(0);
+                    items.get(gantry.getTodo().getFirst()[0]),
+                    items.get(gantry.getTodo().getFirst()[0]).getSlot(),
+                    null
+            ));
+            return null;
         }
-
-        if (!gantries.get(0).getTodo().isEmpty()) {
-            if (gantries.get(0).getTodo().getFirst()[1] == -1) {
-                firstGantrySlot = findEmpty(
-                        0,
-                        0,
-                        items.get(gantries.get(0).getTodo().getFirst()[0]),
-                        items.get(gantries.get(0).getTodo().getFirst()[0]).getPriority() == Integer.MAX_VALUE ?
-                                gantries.get(0).getXMin() : gantries.get(1).getXMin(),
-                        gantries.get(0).getXMax()
-                );
-            } else {
-                firstGantrySlot = items.get(gantries.get(0).getTodo().getFirst()[0]).getSlot();
-                firstGantrySlot.setItem(items.get(gantries.get(0).getTodo().getFirst()[0]));
-            }
-        }
-        return firstGantrySlot;
-    }
-
-    private Slot getNextSecondGantrySlot() throws SlotUnreachableException, NoSlotAvailableException {
-        Slot secondGantrySlot;
-        if (gantries.get(1).getTodo().isEmpty()) {
-            // get new job from output job sequence if any left --------------------------------------------------------
-            if (!outputJobSequence.isEmpty() &&
-                    items.get(outputJobSequence.get(0).getItem().getId()).getSlot() != null) {
-                gantries.get(1).addJobTodo(new int[]{
-                        outputJobSequence.get(0).getItem().getId(),
-                        items.get(outputJobSequence.get(0).getItem().getId()).getSlot().getId(),
-                        outputJobSequence.get(0).getItem().getPriority()
-                });
-                gantries.get(1).addJobTodo(new int[]{
-                        outputJobSequence.get(0).getItem().getId(),
-                        outputJobSequence.get(0).getPlace().getSlot().getId(),
-                        outputJobSequence.get(0).getItem().getPriority()
-                });
-                outputJobSequence.remove(0);
-            } else return null;
-        }
-        if (gantries.get(1).getTodo().getFirst()[1] == outputSlot.getId()) {
-            secondGantrySlot = outputSlot;
-        } else if (gantries.get(1).getTodo().getFirst()[1] == -1) {
-            secondGantrySlot = findEmpty(
-                    gantries.get(1).getCurrentX(),
-                    gantries.get(1).getCurrentY(),
-                    gantries.get(1).getItem(),
-                    gantries.get(1).getXMin(),
-                    gantries.get(1).getXMax()
+        if (gantry.getTodo().getFirst()[1] == inputSlot.getId()) {
+            returnSlot = inputSlot;
+            items.get(gantry.getTodo().getFirst()[0]).setSlot(
+                    inputSlot
+            );
+        } else if (gantry.getTodo().getFirst()[1] == outputSlot.getId()) {
+            returnSlot = outputSlot;
+        } else if (gantry.getTodo().getFirst()[1] == -1) {
+            returnSlot = findEmpty(
+                    gantry.getCurrentX(),
+                    gantry.getCurrentY(),
+                    gantry.getItem(),
+                    gantry.getItem().getPriority() == Integer.MAX_VALUE ? gantry.getXMin() : sharedMinX,
+                    gantry.getItem().getPriority() == Integer.MAX_VALUE ? gantry.getXMax() : sharedMaxX
             );
         } else {
-            secondGantrySlot = items.get(gantries.get(1).getTodo().getFirst()[0]).getSlot();
-            if (secondGantrySlot.isBuried()) {
-                unBury(secondGantrySlot, gantries.get(1));
-                secondGantrySlot = items.get(gantries.get(1).getTodo().getFirst()[0]).getSlot();
+            returnSlot = items.get(gantry.getTodo().getFirst()[0]).getSlot();
+            if (returnSlot.isBuried()) {
+                unBury(returnSlot, gantry);
+                returnSlot = items.get(gantry.getTodo().getFirst()[0]).getSlot();
             }
         }
-        return secondGantrySlot;
+        return returnSlot;
     }
 }
