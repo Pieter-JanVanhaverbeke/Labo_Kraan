@@ -20,16 +20,17 @@ public class Gantry {
     private final int pickupPlaceDuration;
 
     // other fields ----------------------------------------------------------------------------------------------------
-    private int currentX,currentY;
+    private double currentX,currentY;
     private double currentTime;
     private Item item;
 
     private LinkedList<int[]> todo;
-    private LinkedList<int[]> priorityTodo;
-    private LinkedList<Slot> ignore;
     private int ignoreBoundUpper;
     private int ignoreBoundLower;
     private int unBurySlot;
+
+    boolean dropping;
+    int dropTime;
 
     // output ----------------------------------------------------------------------------------------------------------
     private PrintWriter outputWriter;
@@ -53,12 +54,12 @@ public class Gantry {
         this.pickupPlaceDuration = pickupPlaceDuration;
 
         this.todo = new LinkedList<>();
-        this.priorityTodo = new LinkedList<>();
-        this.ignore = new LinkedList<>();
         this.currentTime = 0;
         this.unBurySlot = -1;
         this.ignoreBoundLower = Integer.MIN_VALUE;
         this.ignoreBoundUpper = Integer.MAX_VALUE;
+
+        dropping = false;
     }
 
     // =================================================================================================================
@@ -115,19 +116,27 @@ public class Gantry {
         return pickupPlaceDuration;
     }
 
-    public int getCurrentX() {
+    public int getxMin() {
+        return xMin;
+    }
+
+    public int getxMax() {
+        return xMax;
+    }
+
+    public double getCurrentX() {
         return currentX;
     }
 
-    public void setCurrentX(int currentX) {
+    public void setCurrentX(double currentX) {
         this.currentX = currentX;
     }
 
-    public int getCurrentY() {
+    public double getCurrentY() {
         return currentY;
     }
 
-    public void setCurrentY(int currentY) {
+    public void setCurrentY(double currentY) {
         this.currentY = currentY;
     }
 
@@ -157,22 +166,6 @@ public class Gantry {
 
     public void setTodo(LinkedList<int[]> todo) {
         this.todo = todo;
-    }
-
-    public LinkedList<int[]> getPriorityTodo() {
-        return priorityTodo;
-    }
-
-    public void setPriorityTodo(LinkedList<int[]> priorityTodo) {
-        this.priorityTodo = priorityTodo;
-    }
-
-    public LinkedList<Slot> getIgnore() {
-        return ignore;
-    }
-
-    public void setIgnore(LinkedList<Slot> ignore) {
-        this.ignore = ignore;
     }
 
     public int getIgnoreBoundUpper() {
@@ -230,11 +223,11 @@ public class Gantry {
      *
      * @return      time taken to move
      */
-    public int moveTo(Slot slot) {
+    public double moveTo(Slot slot) {
         double start = currentTime;
         updateTimeDistance(slot.getCenterX(), slot.getCenterY());
         print();
-        return (int) (currentTime - start);
+        return currentTime - start;
     }
 
     /**
@@ -248,10 +241,14 @@ public class Gantry {
      *
      * @return              time taken to move
      */
-    public int moveTo(int centerX, int centerY, int timeNeeded) {
-        int time = moveFor(timeNeeded, centerX, centerY);
+    public double moveTo(double centerX, double centerY, double timeNeeded) {
+        double time = moveFor(timeNeeded, centerX, centerY);
         print();
         return time;
+    }
+
+    public double moveTo(Slot slot, double timeLeft) {
+        return moveTo(slot.getCenterX(), slot.getCenterY(), timeLeft);
     }
 
     /**
@@ -260,26 +257,13 @@ public class Gantry {
      */
     public void print() {
         outputWriter.println(String.format(
-                "%d;%.2f;%d;%d;%s",
+                "%d;%.2f;%.0f;%.0f;%s",
                 id,
                 currentTime,
                 currentX,
                 currentY,
                 item == null ? "null" : String.valueOf(item.getId())
         ).replace(",", "."));
-    }
-
-    /**
-     * @deprecated
-     * Method to update a gantry's time and distance to move to a given location.
-     *
-     * @param slot  slot to move to
-     */
-    private void updateTimeDistance(Slot slot){
-        // update time after moving
-        currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
-        currentX = slot.getCenterX();
-        currentY = slot.getCenterY();
     }
 
     private void updateTimeDistance(int centerX, int centerY) {
@@ -315,7 +299,7 @@ public class Gantry {
      *
      * @return      time needed
      */
-    public int pickupDrop(Slot slot) throws SlotAlreadyHasItemException {
+    public double pickupDrop(Slot slot) throws SlotAlreadyHasItemException {
         if (item != null) {
             item.setSlot(slot);
             item = null;
@@ -323,7 +307,6 @@ public class Gantry {
             item = slot.getItem();
             item.setSlot(null);
             if (slot.getId() == unBurySlot) {
-                ignore.clear();
                 unBurySlot = -1;
                 ignoreBoundLower = Integer.MIN_VALUE;
                 ignoreBoundUpper = Integer.MAX_VALUE;
@@ -340,7 +323,7 @@ public class Gantry {
      *
      * @param time  time to wait
      */
-    public void waitForOther(int time) {
+    public void waitForOther(double time) {
         currentTime += time;
         print();
     }
@@ -361,6 +344,10 @@ public class Gantry {
                 + pickupPlaceDuration;
     }
 
+    public double actionTime(Slot slot) {
+        return actionTime(slot.getCenterX(), slot.getCenterY());
+    }
+
     /**
      * Method to have a given gantry move for a specific amount of time. No output will be printed here. If the
      * gantry actually manages to reach it's next destination true will be returned, signifying it can actually drop
@@ -372,17 +359,17 @@ public class Gantry {
      *
      * @return          true if the gantry managed to reach it's pick up or drop off
      */
-    public int moveFor(int timeToAct, int nextX, int nextY) {
-        int startX = currentX;
-        int startY = currentY;
-        currentX = (int) (currentX - nextX < 0 ?
+    public double moveFor(double timeToAct, double nextX, double nextY) {
+        double startX = currentX;
+        double startY = currentY;
+        currentX = currentX < nextX ?
                 Math.min(currentX + timeToAct * xSpeed, nextX) :
-                Math.max(currentX - timeToAct * xSpeed, nextX));
-        currentY = (int) (currentY - nextY < 0 ?
+                Math.max(currentX - timeToAct * xSpeed, nextX);
+        currentY = currentY < nextY ?
                 Math.min(currentY + timeToAct * ySpeed, nextY) :
-                Math.max(currentY - timeToAct * ySpeed, nextY));
+                Math.max(currentY - timeToAct * ySpeed, nextY);
         if (currentX == nextX && currentY == nextY) {
-            int time = (int) Math.max(
+            double time = Math.max(
                     Math.abs(currentX - startX) / xSpeed,
                     Math.abs(currentY - startY) / ySpeed
             );
@@ -390,7 +377,7 @@ public class Gantry {
             return time;
         } else {
             currentTime += timeToAct;
-            return 0;
+            return timeToAct;
         }
     }
 
@@ -403,66 +390,26 @@ public class Gantry {
      */
     public void addPriorityTodo(int unBurySlot, LinkedList<int[]> sequence, List<Slot> ignore) {
         this.unBurySlot = unBurySlot;
-        this.ignore.addAll(ignore);
         while (!sequence.isEmpty()) {
             todo.addFirst(sequence.removeLast());
         }
         ignoreBoundLower = Integer.MAX_VALUE;
         ignoreBoundUpper = Integer.MIN_VALUE;
-        for (Slot slot: ignore) {
+        for (Slot slot : ignore) {
             if (slot.getCenterX() < ignoreBoundLower) ignoreBoundLower = slot.getCenterX();
             if (slot.getCenterX() > ignoreBoundUpper) ignoreBoundUpper = slot.getCenterX();
         }
     }
 
-    // =================================================================================================================
-    // single move =====================================================================================================
-
-    /**
-     * Moves gantry to first slot, picks up item, moves gantry to second slot and drops item. Also updates
-     * bidirectional coupling of item and slot.
-     *
-     * @param item      item to move
-     * @param fromSlot  first slot
-     * @param toSlot    scond slot
-     * @throws SlotAlreadyHasItemException  thrown when the slot where item is attempted to be put already has one
-     * @throws SlotUnreachableException     thrown if gantry can't reach slot
-     */
-    public void singleMove(Item item, Slot fromSlot, Slot toSlot) throws SlotAlreadyHasItemException, SlotUnreachableException{
-
-        // check if gantry can reach slots, debug only for one gantry --------------------------------------------------
-        if(!canReachSlot(toSlot)) throw new SlotUnreachableException(toSlot.toString());
-        if(!canReachSlot(fromSlot)) throw new SlotUnreachableException(fromSlot.toString());
-
-        // move to required slot and pick up item ----------------------------------------------------------------------
-        updateTime(fromSlot);
-        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
-        currentTime+=pickupPlaceDuration;
-        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
-
-        // move to next slot and drop off item -------------------------------------------------------------------------
-        updateTime(toSlot);
-        outputWriter.println(String.format("%d;%.0f;%d;%d;%d", id, currentTime, currentX, currentY, item.getId()));
-        item.setSlot(toSlot);
-        currentTime+=pickupPlaceDuration;
-        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+    public int next(Slot nextSlot) {
+        return (int) (!dropping ?
+                currentX + (currentX < nextSlot.getCenterX() ?
+                        xSpeed :
+                        -xSpeed) :
+                currentX);
     }
 
-    /**
-     * updates time of gantry according to the x and y speeds and updates gantry position
-     *
-     * @param slot  slot where gantry is moving to
-     */
-    public void updateTime(Slot slot){
-        currentTime += Math.max(Math.abs(slot.getCenterX()-currentX)/xSpeed, Math.abs(slot.getCenterY()-currentY)/ySpeed);
-        currentX = slot.getCenterX();
-        currentY = slot.getCenterY();
-    }
-
-    /**
-     * prints out starting position for the beginning of the algorithm
-     */
-    public void printStart(){
-        outputWriter.println(String.format("%d;%.0f;%d;%d;null", id, currentTime, currentX, currentY));
+    public double moveAndDrop(Slot slot) throws SlotAlreadyHasItemException {
+        return moveTo(slot) + pickupDrop(slot);
     }
 }

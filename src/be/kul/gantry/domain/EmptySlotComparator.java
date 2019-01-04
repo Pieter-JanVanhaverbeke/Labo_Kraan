@@ -4,8 +4,8 @@ import java.util.Comparator;
 
 public class EmptySlotComparator implements Comparator<Slot>{
 
-    private int centerX;
-    private int centerY;
+    private double centerX;
+    private double centerY;
 
     @Override
     public int compare(Slot slot1, Slot slot2) {
@@ -15,11 +15,11 @@ public class EmptySlotComparator implements Comparator<Slot>{
         );
     }
 
-    public void setCenterX(int centerX) {
+    public void setCenterX(double centerX) {
         this.centerX = centerX;
     }
 
-    public void setCenterY(int centerY) {
+    public void setCenterY(double centerY) {
         this.centerY = centerY;
     }
 }

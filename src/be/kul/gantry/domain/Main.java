@@ -20,9 +20,11 @@ public class Main {
             Problem problem = Problem.fromJson(new File(input));
             problem.setOutputWriter(new PrintWriter(new File(output)));
             problem.solve();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ParseException e) {
+        } catch (IOException |
+                ParseException |
+                NoSlotAvailableException |
+                SlotAlreadyHasItemException |
+                SlotUnreachableException e) {
             e.printStackTrace();
         }
     }
