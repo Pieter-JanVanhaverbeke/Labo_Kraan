@@ -444,7 +444,7 @@ public class Problem {
      * Method to simulate the time flow, will call actions on gantries.
      */
     private void tick()
-            throws SlotAlreadyHasItemException, NoSlotAvailableException, SlotUnreachableException {
+            throws SlotAlreadyHasItemException, NoSlotAvailableException {
         if (gantries.size() == 1) {
             if (gantries.get(0).getNextSlot() == null) return;
             gantries.get(0).moveAndDrop();
