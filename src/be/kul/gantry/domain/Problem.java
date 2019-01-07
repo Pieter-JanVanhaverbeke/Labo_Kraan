@@ -415,7 +415,7 @@ public class Problem {
             // prevent collision near inout slot -----------------------------------------------------------------------
             if(outputFromSlot != null &&
                     inputFromSlot != null &&
-                    Math.abs(outputFromSlot.getCenterX() - inputFromSlot.getCenterX()) < 20){
+                    Math.abs(outputFromSlot.getCenterX() - inputFromSlot.getCenterX()) < safetyDistance){
                 try {
                     gantries.get(0).move(outputFromSlot);
                     gantries.get(0).pickDropItem(outputFromSlot.getItem());
