@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="algoritme:jar">
+    <output-path>$PROJECT_DIR$/jar</output-path>
+    <root id="archive" name="algoritme.jar">
+      <element id="module-output" name="Project(1)" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/validator-v7.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/json-simple-1.1.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/guava-23.1-jre.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/gson-2.7.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/guava-23.1-jre-javadoc.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
